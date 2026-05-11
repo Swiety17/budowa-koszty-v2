@@ -1,10 +1,9 @@
 'use client'
-import { useRef, useState, useMemo, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ArrowLeft, Receipt } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import type { CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +33,6 @@ export default function AddCostForm({
   stages: ProjectStage[]
 }) {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -76,22 +74,24 @@ export default function AddCostForm({
 
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-
-      const { error } = await supabase.from('costs').insert({
-        id:          crypto.randomUUID(),
-        project_id:  projectId,
-        name,
-        amount:      parseAmount(amount)!,
-        date,
-        vendor:      (fd.get('vendor') as string).trim() || null,
-        notes:       (fd.get('notes') as string).trim() || null,
-        category_id: (fd.get('category_id') as string) || null,
-        stage_id:    (fd.get('stage_id') as string) || null,
+      const res = await fetch(`/api/projects/${projectId}/costs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          amount:      parseAmount(amount)!,
+          date,
+          vendor:      (fd.get('vendor') as string).trim() || null,
+          notes:       (fd.get('notes') as string).trim() || null,
+          category_id: (fd.get('category_id') as string) || null,
+          stage_id:    (fd.get('stage_id') as string) || null,
+        }),
       })
-
-      if (error) { toast.error(error.message); return }
+      if (!res.ok) {
+        const { error } = await res.json()
+        toast.error(error ?? 'Błąd serwera')
+        return
+      }
       toast.success('Koszt dodany')
       router.push(`/projects/${projectId}`)
     } catch {

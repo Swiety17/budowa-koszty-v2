@@ -1,7 +1,6 @@
 'use client'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import type { Cost, CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +32,7 @@ function costToForm(cost: Cost): Form {
 
 export default function EditCostSheet({
   cost,
+  projectId,
   open,
   onOpenChange,
   categories,
@@ -40,13 +40,13 @@ export default function EditCostSheet({
   onUpdated,
 }: {
   cost: Cost | null
+  projectId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   categories: CostCategory[]
   stages: ProjectStage[]
   onUpdated: (updated: Cost) => void
 }) {
-  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState<Form>({
     name: '', amount: '', date: new Date().toISOString().split('T')[0],
     vendor: '', notes: '', category_id: '', stage_id: '',
@@ -70,9 +70,10 @@ export default function EditCostSheet({
 
     setSaving(true)
     try {
-      const { data, error } = await supabase
-        .from('costs')
-        .update({
+      const res = await fetch(`/api/projects/${projectId}/costs/${cost.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: form.name.trim(),
           amount,
           date: form.date,
@@ -80,11 +81,10 @@ export default function EditCostSheet({
           notes: form.notes.trim() || null,
           category_id: form.category_id || null,
           stage_id: form.stage_id || null,
-        })
-        .eq('id', cost.id)
-        .select('*, cost_categories(id, name, color), project_stages(id, name, color, sort_order)')
-        .single()
-      if (error) { toast.error(error.message); return }
+        }),
+      })
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
+      const data = await res.json()
       onUpdated(data as Cost)
       onOpenChange(false)
       toast.success('Koszt zaktualizowany')

@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Plus, Search, X, MoreHorizontal, Pencil, Trash2, Receipt } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import type { Cost, CostCategory, ProjectStage } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -40,7 +39,6 @@ export default function CostList({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = useMemo(() => createClient(), [])
 
   const [costs, setCosts] = useState(initialCosts)
   const [search, setSearch] = useState('')
@@ -97,8 +95,8 @@ export default function CostList({
     if (!deleteId) return
     setDeleting(true)
     try {
-      const { error } = await supabase.from('costs').delete().eq('id', deleteId)
-      if (error) { toast.error(error.message); return }
+      const res = await fetch(`/api/projects/${projectId}/costs/${deleteId}`, { method: 'DELETE' })
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
       setCosts(prev => prev.filter(c => c.id !== deleteId))
       setDeleteId(null)
       toast.success('Koszt usunięty')
@@ -306,6 +304,7 @@ export default function CostList({
       {/* Edit Sheet */}
       <EditCostSheet
         cost={editingCost}
+        projectId={projectId}
         open={!!editingCost}
         onOpenChange={open => { if (!open) setEditingCost(null) }}
         categories={categories}

@@ -1,10 +1,9 @@
 'use client'
-import { useRef, useState, useMemo, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ArrowLeft, Building2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,7 +23,6 @@ function parseBudget(raw: string): number | null {
 
 export default function NewProjectPage() {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -58,21 +56,23 @@ export default function NewProjectPage() {
 
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-
-      const id = crypto.randomUUID()
-      const { error } = await supabase.from('projects').insert({
-        id,
-        user_id:     user.id,
-        name,
-        address:     (fd.get('address') as string).trim() || null,
-        budget:      parseBudget(fd.get('budget') as string),
-        description: (fd.get('description') as string).trim() || null,
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          address:     (fd.get('address') as string).trim() || null,
+          budget:      parseBudget(fd.get('budget') as string),
+          description: (fd.get('description') as string).trim() || null,
+        }),
       })
-
-      if (error) { toast.error(error.message); return }
-      router.push(`/projects/${id}`)
+      if (!res.ok) {
+        const { error } = await res.json()
+        toast.error(error ?? 'Błąd serwera')
+        return
+      }
+      const project = await res.json()
+      router.push(`/projects/${project.id}`)
     } catch {
       toast.error('Błąd połączenia. Spróbuj ponownie.')
     } finally {

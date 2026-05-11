@@ -1,10 +1,9 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ArrowLeft, MapPin, Pencil, Trash2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import type { Project } from '@/types'
 import { formatCurrency } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -34,7 +33,6 @@ export default function ProjectHeader({
   isOwner: boolean
 }) {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [project, setProject] = useState(initial)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -56,18 +54,18 @@ export default function ProjectHeader({
     if (!form.name.trim()) { toast.error('Nazwa jest wymagana'); return }
     setSaving(true)
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .update({
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: form.name.trim(),
           address: form.address.trim() || null,
           budget: parseBudget(form.budget),
           description: form.description.trim() || null,
-        })
-        .eq('id', project.id)
-        .select()
-        .single()
-      if (error) { toast.error(error.message); return }
+        }),
+      })
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
+      const data = await res.json()
       setProject(data)
       setEditOpen(false)
       toast.success('Zapisano zmiany')
@@ -79,8 +77,8 @@ export default function ProjectHeader({
   async function deleteProject() {
     setDeleting(true)
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', project.id)
-      if (error) { toast.error(error.message); return }
+      const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
       toast.success('Budowa usunięta')
       router.push('/dashboard')
     } finally {
