@@ -3,7 +3,7 @@ import { useRef, useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, Camera, ImagePlus, X, Sparkles, Loader2 } from 'lucide-react'
+import { ArrowLeft, Camera, ImagePlus, X, Sparkles, Loader2, Plus } from 'lucide-react'
 import type { CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import VendorInput from './VendorInput'
 
-type Errors = { name?: string; amount?: string; date?: string }
+type Errors = { name?: string; amount?: string }
 
 function parseAmount(raw: string): number | null {
   const cleaned = raw.trim().replace(/\s/g, '').replace(',', '.')
@@ -21,7 +21,14 @@ function parseAmount(raw: string): number | null {
   return isNaN(n) || n <= 0 ? null : n
 }
 
-const today = new Date().toISOString().split('T')[0]
+function todayStr() { return new Date().toISOString().split('T')[0] }
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]
+}
+function formatDateChip(s: string) {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
+}
 
 export default function AddCostForm({
   projectId,
@@ -39,22 +46,38 @@ export default function AddCostForm({
   const [errors, setErrors] = useState<Errors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
 
-  // Image / OCR state
+  // Image / OCR
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrDone, setOcrDone] = useState(false)
 
-  // Form fields — controlled so OCR can pre-fill them
+  // Core fields
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(today)
+
+  // Date chips
+  const [dateMode, setDateMode] = useState<'today' | 'yesterday' | 'custom'>('today')
+  const [customDate, setCustomDate] = useState(todayStr)
+
+  // Optional fields
   const [vendor, setVendor] = useState('')
   const [notes, setNotes] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [stageId, setStageId] = useState('')
-
   const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([])
+
+  // Which optional sections are expanded
+  const [showVendor, setShowVendor] = useState(false)
+  const [showCategory, setShowCategory] = useState(false)
+  const [showStage, setShowStage] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
+
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
+  const submitting = useRef(false)
+
+  const date = dateMode === 'today' ? todayStr() : dateMode === 'yesterday' ? yesterdayStr() : customDate
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/vendors`)
@@ -63,14 +86,18 @@ export default function AddCostForm({
       .catch(() => {})
   }, [projectId])
 
-  const cameraRef  = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
-  const amountRef  = useRef<HTMLInputElement>(null)
-  const dateRef    = useRef<HTMLInputElement>(null)
-  const vendorRef  = useRef<HTMLInputElement>(null)
-  const notesRef   = useRef<HTMLTextAreaElement>(null)
-  const formRef    = useRef<HTMLFormElement>(null)
-  const submitting = useRef(false)
+  function applyOcr(ocr: Record<string, string | number>) {
+    if (ocr.name)   setName(String(ocr.name))
+    if (ocr.amount) setAmount(String(ocr.amount))
+    if (ocr.vendor) { setVendor(String(ocr.vendor)); setShowVendor(true) }
+    if (ocr.items_text) { setNotes(String(ocr.items_text)); setShowNotes(true) }
+    if (ocr.date) {
+      const d = String(ocr.date)
+      if (d === todayStr())     setDateMode('today')
+      else if (d === yesterdayStr()) setDateMode('yesterday')
+      else { setCustomDate(d); setDateMode('custom') }
+    }
+  }
 
   async function handleFile(file: File) {
     setImageFile(file)
@@ -78,34 +105,13 @@ export default function AddCostForm({
     const reader = new FileReader()
     reader.onload = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
-    await runOcr(file)
-  }
 
-  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
-    e.target.value = ''
-  }
-
-  function clearImage() {
-    setImageFile(null)
-    setImagePreview(null)
-    setOcrDone(false)
-  }
-
-  async function runOcr(file: File) {
     setOcrLoading(true)
     try {
-      const fd = new FormData()
-      fd.set('image', file)
+      const fd = new FormData(); fd.set('image', file)
       const res = await fetch('/api/ocr', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('OCR failed')
-      const ocr = await res.json()
-      if (ocr.name)       setName(ocr.name)
-      if (ocr.vendor)     setVendor(ocr.vendor)
-      if (ocr.amount)     setAmount(String(ocr.amount))
-      if (ocr.date)       setDate(ocr.date)
-      if (ocr.items_text) setNotes(ocr.items_text)
+      applyOcr(await res.json())
       setOcrDone(true)
       toast.success('Dane odczytane ze zdjęcia!')
     } catch {
@@ -115,16 +121,19 @@ export default function AddCostForm({
     }
   }
 
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
+
   function validateName(v: string) {
-    if (!v.trim()) return 'Nazwa jest wymagana'
+    if (!v.trim()) return 'Wymagane'
     if (v.trim().length < 2) return 'Min. 2 znaki'
   }
   function validateAmount(v: string) {
-    if (!v.trim()) return 'Kwota jest wymagana'
-    if (parseAmount(v) === null) return 'Podaj poprawną kwotę'
-  }
-  function validateDate(v: string) {
-    if (!v) return 'Data jest wymagana'
+    if (!v.trim()) return 'Wymagana'
+    if (parseAmount(v) === null) return 'Niepoprawna kwota'
   }
 
   async function handleSubmit(e?: FormEvent) {
@@ -132,13 +141,11 @@ export default function AddCostForm({
     if (submitting.current) return
     submitting.current = true
 
-    const nameErr   = validateName(name)
+    const nameErr = validateName(name)
     const amountErr = validateAmount(amount)
-    const dateErr   = validateDate(date)
-
-    if (nameErr || amountErr || dateErr) {
-      setTouched({ name: true, amount: true, date: true })
-      setErrors({ name: nameErr, amount: amountErr, date: dateErr })
+    if (nameErr || amountErr) {
+      setTouched({ name: true, amount: true })
+      setErrors({ name: nameErr, amount: amountErr })
       submitting.current = false
       return
     }
@@ -146,26 +153,18 @@ export default function AddCostForm({
     setLoading(true)
     try {
       let receipt_url: string | null = null
-
       if (imageFile) {
-        const fd = new FormData()
-        fd.set('image', imageFile)
-        const uploadRes = await fetch(`/api/projects/${projectId}/receipts`, { method: 'POST', body: fd })
-        if (!uploadRes.ok) {
-          const { error } = await uploadRes.json().catch(() => ({}))
-          toast.error(error ?? 'Błąd przesyłania zdjęcia')
-          return
-        }
-        receipt_url = (await uploadRes.json()).url
+        const fd = new FormData(); fd.set('image', imageFile)
+        const up = await fetch(`/api/projects/${projectId}/receipts`, { method: 'POST', body: fd })
+        if (!up.ok) { const { error } = await up.json().catch(() => ({})); toast.error(error ?? 'Błąd przesyłania'); return }
+        receipt_url = (await up.json()).url
       }
 
       const res = await fetch(`/api/projects/${projectId}/costs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          amount: parseAmount(amount)!,
-          date,
+          name: name.trim(), amount: parseAmount(amount)!, date,
           vendor: vendor.trim() || null,
           notes: notes.trim() || null,
           category_id: categoryId || null,
@@ -173,11 +172,7 @@ export default function AddCostForm({
           receipt_url,
         }),
       })
-      if (!res.ok) {
-        const { error } = await res.json()
-        toast.error(error ?? 'Błąd serwera')
-        return
-      }
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
       toast.success('Koszt dodany!')
       router.push(`/projects/${projectId}`)
     } catch {
@@ -188,8 +183,11 @@ export default function AddCostForm({
     }
   }
 
+  const selectedCategory = categories.find(c => c.id === categoryId)
+  const selectedStage    = stages.find(s => s.id === stageId)
+
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto pb-28">
       <Link
         href={`/projects/${projectId}`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 -ml-1 transition-colors"
@@ -198,243 +196,324 @@ export default function AddCostForm({
         {projectName}
       </Link>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">Nowy koszt</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Zeskanuj paragon lub wypełnij ręcznie</p>
-      </div>
+      <h1 className="text-xl font-bold mb-6">Nowy koszt</h1>
 
-      <form ref={formRef} onSubmit={handleSubmit} noValidate>
-        {/* ── Photo / OCR section — PRIMARY action ── */}
-        <div className="mb-6">
-          {imagePreview ? (
-            <div className="relative rounded-xl overflow-hidden border border-border bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreview} alt="Paragon" className="w-full max-h-72 object-contain" />
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
-              {/* OCR loading overlay */}
-              {ocrLoading && (
-                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium">Odczytuję dane z paragonu…</p>
-                </div>
-              )}
-
-              {/* OCR done badge */}
-              {ocrDone && !ocrLoading && (
-                <div className="absolute top-3 left-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-                    <Sparkles className="h-3 w-3" />
-                    Dane odczytane
-                  </span>
-                </div>
-              )}
-
-              {/* Clear button */}
-              <button
-                type="button"
-                onClick={clearImage}
-                disabled={ocrLoading}
-                className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors disabled:opacity-50"
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => cameraRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50 active:bg-muted"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Camera className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Zrób zdjęcie</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">aparat</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => galleryRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50 active:bg-muted"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <ImagePlus className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Z galerii</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">lub dysku</p>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {/* hidden inputs */}
-          <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleInput} />
-          <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleInput} />
-        </div>
-
-        {/* ── Manual form fields ── */}
-        <div className="space-y-5">
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              Nazwa <span className="text-destructive ml-0.5">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={e => {
-                setName(e.target.value)
-                if (touched.name) setErrors(p => ({ ...p, name: validateName(e.target.value) }))
-              }}
-              onBlur={e => {
-                setTouched(p => ({ ...p, name: true }))
-                setErrors(p => ({ ...p, name: validateName(e.target.value) }))
-              }}
-              maxLength={200}
-              placeholder="np. Materiały budowlane"
-              autoCapitalize="sentences"
-              enterKeyHint="next"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus() } }}
-              className={cn(errors.name && touched.name && 'border-destructive focus-visible:ring-destructive')}
-              disabled={loading || ocrLoading}
-            />
-            {errors.name && touched.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-
-          {/* Amount + Date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">
-                Kwota <span className="text-destructive ml-0.5">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="amount"
-                  ref={amountRef}
-                  value={amount}
-                  onChange={e => {
-                    setAmount(e.target.value)
-                    if (touched.amount) setErrors(p => ({ ...p, amount: validateAmount(e.target.value) }))
-                  }}
-                  onBlur={e => {
-                    setTouched(p => ({ ...p, amount: true }))
-                    setErrors(p => ({ ...p, amount: validateAmount(e.target.value) }))
-                  }}
-                  inputMode="decimal"
-                  placeholder="0"
-                  className={cn('pr-14', errors.amount && touched.amount && 'border-destructive focus-visible:ring-destructive')}
-                  enterKeyHint="next"
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); dateRef.current?.focus() } }}
-                  disabled={loading || ocrLoading}
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">PLN</span>
-              </div>
-              {errors.amount && touched.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">
-                Data <span className="text-destructive ml-0.5">*</span>
-              </Label>
-              <Input
-                id="date"
-                ref={dateRef}
-                type="date"
-                value={date}
-                onChange={e => {
-                  setDate(e.target.value)
-                  if (touched.date) setErrors(p => ({ ...p, date: validateDate(e.target.value) }))
-                }}
-                onBlur={e => {
-                  setTouched(p => ({ ...p, date: true }))
-                  setErrors(p => ({ ...p, date: validateDate(e.target.value) }))
-                }}
-                className={cn(errors.date && touched.date && 'border-destructive focus-visible:ring-destructive')}
-                disabled={loading || ocrLoading}
-              />
-              {errors.date && touched.date && <p className="text-xs text-destructive">{errors.date}</p>}
-            </div>
-          </div>
-
-          {/* Vendor */}
-          <div className="space-y-2">
-            <Label htmlFor="vendor">
-              Wykonawca / dostawca
-              <span className="text-xs text-muted-foreground ml-1.5">(opcjonalne)</span>
-            </Label>
-            <VendorInput
-              id="vendor"
-              value={vendor}
-              onChange={setVendor}
-              suggestions={vendorSuggestions}
-              disabled={loading || ocrLoading}
-            />
-          </div>
-
-          {/* Category + Stage */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category_id">
-                Kategoria
-                <span className="text-xs text-muted-foreground ml-1.5">(opc.)</span>
-              </Label>
-              <select
-                id="category_id"
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                disabled={loading || ocrLoading}
-                className="w-full h-9 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
-              >
-                <option value="">Brak</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-
-            {stages.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="stage_id">
-                  Etap
-                  <span className="text-xs text-muted-foreground ml-1.5">(opc.)</span>
-                </Label>
-                <select
-                  id="stage_id"
-                  value={stageId}
-                  onChange={e => setStageId(e.target.value)}
-                  disabled={loading || ocrLoading}
-                  className="w-full h-9 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
-                >
-                  <option value="">Brak</option>
-                  {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+        {/* ── Paragon / OCR ── */}
+        {imagePreview ? (
+          <div className="relative rounded-xl overflow-hidden border border-border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagePreview} alt="Paragon" className="w-full max-h-48 object-contain" />
+            {ocrLoading && (
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <p className="text-sm font-medium">Odczytuję paragon…</p>
               </div>
             )}
+            {ocrDone && !ocrLoading && (
+              <div className="absolute top-2 left-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2.5 py-0.5 text-xs font-semibold text-white">
+                  <Sparkles className="h-3 w-3" />
+                  Dane odczytane
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { setImageFile(null); setImagePreview(null); setOcrDone(false) }}
+              disabled={ocrLoading}
+              className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center disabled:opacity-50"
+            >
+              <X className="h-3.5 w-3.5 text-white" />
+            </button>
           </div>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
+              <Camera className="h-4 w-4" />
+              Zrób zdjęcie
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Z galerii
+            </button>
+          </div>
+        )}
+        <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleInput} />
+        <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleInput} />
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">
-              Uwagi / pozycje faktury
-              <span className="text-xs text-muted-foreground ml-1.5">(opcjonalne)</span>
-            </Label>
+        {/* ── Kwota ── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="amount">
+            Kwota <span className="text-destructive">*</span>
+          </Label>
+          <div className="relative">
+            <Input
+              id="amount"
+              value={amount}
+              onChange={e => {
+                setAmount(e.target.value)
+                if (touched.amount) setErrors(p => ({ ...p, amount: validateAmount(e.target.value) }))
+              }}
+              onBlur={e => {
+                setTouched(p => ({ ...p, amount: true }))
+                setErrors(p => ({ ...p, amount: validateAmount(e.target.value) }))
+              }}
+              inputMode="decimal"
+              placeholder="0,00"
+              className={cn(
+                'h-14 text-2xl font-bold pr-16 tracking-tight',
+                errors.amount && touched.amount && 'border-destructive',
+              )}
+              disabled={loading || ocrLoading}
+            />
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+              PLN
+            </span>
+          </div>
+          {errors.amount && touched.amount && (
+            <p className="text-xs text-destructive">{errors.amount}</p>
+          )}
+        </div>
+
+        {/* ── Co kupiono ── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="name">
+            Co kupiono? <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={e => {
+              setName(e.target.value)
+              if (touched.name) setErrors(p => ({ ...p, name: validateName(e.target.value) }))
+            }}
+            onBlur={e => {
+              setTouched(p => ({ ...p, name: true }))
+              setErrors(p => ({ ...p, name: validateName(e.target.value) }))
+            }}
+            maxLength={200}
+            placeholder="np. Cement, materiały, usługa…"
+            autoCapitalize="sentences"
+            className={cn(errors.name && touched.name && 'border-destructive')}
+            disabled={loading || ocrLoading}
+          />
+          {errors.name && touched.name && (
+            <p className="text-xs text-destructive">{errors.name}</p>
+          )}
+        </div>
+
+        {/* ── Kiedy (date chips) ── */}
+        <div className="space-y-2">
+          <div className="flex gap-2 flex-wrap">
+            {(['today', 'yesterday'] as const).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDateMode(mode)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-sm font-medium border transition-colors',
+                  dateMode === mode
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground',
+                )}
+              >
+                {mode === 'today' ? 'Dzisiaj' : 'Wczoraj'}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setDateMode('custom')}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-sm font-medium border transition-colors',
+                dateMode === 'custom'
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground',
+              )}
+            >
+              {dateMode === 'custom' ? formatDateChip(customDate) : 'Inna data…'}
+            </button>
+          </div>
+          {dateMode === 'custom' && (
+            <input
+              type="date"
+              value={customDate}
+              onChange={e => setCustomDate(e.target.value)}
+              autoFocus
+              className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+            />
+          )}
+        </div>
+
+        {/* ── Opcjonalne chipy ── */}
+        <div className="flex flex-wrap gap-2">
+          {/* Wykonawca */}
+          {showVendor ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
+              <span className="truncate max-w-28">{vendor || 'Wykonawca'}</span>
+              <button type="button" onClick={() => { setVendor(''); setShowVendor(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowVendor(true)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Wykonawca
+            </button>
+          )}
+
+          {/* Kategoria */}
+          {showCategory ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
+              {selectedCategory ? (
+                <span className="flex items-center gap-1.5 truncate max-w-28">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
+                  {selectedCategory.name}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Kategoria</span>
+              )}
+              <button type="button" onClick={() => { setCategoryId(''); setShowCategory(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCategory(true)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Kategoria
+            </button>
+          )}
+
+          {/* Etap */}
+          {stages.length > 0 && (
+            showStage ? (
+              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
+                <span className="truncate max-w-28">{selectedStage?.name ?? 'Etap'}</span>
+                <button type="button" onClick={() => { setStageId(''); setShowStage(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowStage(true)}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Etap
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Wykonawca — rozwinięte */}
+        {showVendor && (
+          <VendorInput
+            id="vendor"
+            value={vendor}
+            onChange={setVendor}
+            suggestions={vendorSuggestions}
+            placeholder="np. Firma XYZ, Jan Kowalski…"
+            disabled={loading || ocrLoading}
+          />
+        )}
+
+        {/* Kategoria — rozwinięte (kolorowe piluły) */}
+        {showCategory && categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {categories.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCategoryId(prev => prev === c.id ? '' : c.id)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                  categoryId === c.id
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
+                )}
+              >
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Etap — rozwinięte */}
+        {showStage && stages.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {stages.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setStageId(prev => prev === s.id ? '' : s.id)}
+                className={cn(
+                  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                  stageId === s.id
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
+                )}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Uwagi — toggle */}
+        {showNotes ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes" className="text-sm">Uwagi</Label>
+              <button
+                type="button"
+                onClick={() => { setNotes(''); setShowNotes(false) }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Usuń
+              </button>
+            </div>
             <Textarea
               id="notes"
-              ref={notesRef}
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={3}
-              placeholder="Dodatkowe informacje, nr faktury, pozycje…"
+              placeholder="Nr faktury, pozycje, dodatkowe informacje…"
               maxLength={500}
               disabled={loading || ocrLoading}
               className="resize-none"
             />
           </div>
-        </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowNotes(true)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Dodaj uwagi
+          </button>
+        )}
 
-        {/* Submit desktop */}
+        {/* Submit — desktop */}
         <div className="mt-8 hidden md:block">
           <Button type="submit" className="w-full" size="lg" disabled={loading || ocrLoading}>
             {loading ? 'Zapisywanie…' : ocrLoading ? 'Odczytuję paragon…' : 'Dodaj koszt'}
@@ -442,7 +521,7 @@ export default function AddCostForm({
         </div>
       </form>
 
-      {/* Submit mobile — sticky above BottomNav */}
+      {/* Submit — mobile sticky */}
       <div
         className="fixed left-0 right-0 md:hidden z-40 px-4 pt-3 pb-3 bg-background/90 backdrop-blur-sm border-t border-border"
         style={{ bottom: 'calc(4rem + var(--safe-bottom, 0px))' }}
