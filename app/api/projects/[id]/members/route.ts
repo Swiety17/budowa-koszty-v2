@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendInvitationEmail } from '@/lib/email'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -29,8 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: project } = await admin.from('projects').select('user_id').eq('id', id).single()
-  if (!project || project.user_id !== user.id)
+  const { data: proj } = await admin.from('projects').select('user_id, name').eq('id', id).single()
+  if (!proj || proj.user_id !== user.id)
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
@@ -48,6 +49,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (error.code === '23505') return Response.json({ error: 'duplicate' }, { status: 409 })
     return Response.json({ error: error.message }, { status: 500 })
   }
+
+  // Wyślij zaproszenie — fire-and-forget (błąd maila nie blokuje odpowiedzi)
+  sendInvitationEmail({
+    toEmail: email,
+    projectName: proj.name,
+    inviterEmail: user.email ?? '',
+  }).catch(err => console.error('[invite email]', err))
 
   return Response.json(data)
 }
