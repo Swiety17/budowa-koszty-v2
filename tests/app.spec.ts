@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-const BASE  = 'https://budowa-koszty-v2.vercel.app'
+const BASE  = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 const EMAIL = 'e2e-test@budowa-koszty.test'
 const PASS  = 'E2eTestPass99!'
 

@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
 })
 
 const FROM = `Budowa Koszty <${process.env.GMAIL_USER}>`
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://budowa-koszty.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 export async function sendInvitationEmail({
   toEmail,
