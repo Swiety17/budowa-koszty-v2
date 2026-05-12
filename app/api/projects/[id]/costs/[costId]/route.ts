@@ -43,7 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; costId: string }> },
 ) {
   const { id, costId } = await params
-  const auth = await authorizeProject(id)
+  const auth = await authorizeProject(id, true)
   if (auth.error) return auth.error
 
   const admin = createAdminClient()

@@ -39,12 +39,13 @@ export default function AddCostForm({
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const formRef    = useRef<HTMLFormElement>(null)
-  const amountRef  = useRef<HTMLInputElement>(null)
-  const dateRef    = useRef<HTMLInputElement>(null)
-  const vendorRef  = useRef<HTMLInputElement>(null)
-  const notesRef   = useRef<HTMLTextAreaElement>(null)
-  const fileRef    = useRef<HTMLInputElement>(null)
+  const formRef      = useRef<HTMLFormElement>(null)
+  const amountRef    = useRef<HTMLInputElement>(null)
+  const dateRef      = useRef<HTMLInputElement>(null)
+  const vendorRef    = useRef<HTMLInputElement>(null)
+  const notesRef     = useRef<HTMLTextAreaElement>(null)
+  const fileRef      = useRef<HTMLInputElement>(null)
+  const submittingRef = useRef(false)
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -77,6 +78,8 @@ export default function AddCostForm({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
     const fd = new FormData(e.currentTarget)
     const name   = (fd.get('name') as string).trim()
     const amount = fd.get('amount') as string
@@ -119,6 +122,7 @@ export default function AddCostForm({
       toast.error('Błąd połączenia. Spróbuj ponownie.')
     } finally {
       setLoading(false)
+      submittingRef.current = false
     }
   }
 

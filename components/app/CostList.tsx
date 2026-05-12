@@ -26,12 +26,14 @@ function monthLabel(key: string): string {
 }
 
 export default function CostList({
-  costs: initialCosts,
+  costs,
+  onCostsChange,
   projectId,
   categories,
   stages,
 }: {
   costs: Cost[]
+  onCostsChange: (costs: Cost[]) => void
   projectId: string
   categories: CostCategory[]
   stages: ProjectStage[]
@@ -39,8 +41,6 @@ export default function CostList({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  const [costs, setCosts] = useState(initialCosts)
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [editingCost, setEditingCost] = useState<Cost | null>(null)
@@ -97,7 +97,7 @@ export default function CostList({
     try {
       const res = await fetch(`/api/projects/${projectId}/costs/${deleteId}`, { method: 'DELETE' })
       if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
-      setCosts(prev => prev.filter(c => c.id !== deleteId))
+      onCostsChange(costs.filter(c => c.id !== deleteId))
       setDeleteId(null)
       toast.success('Koszt usunięty')
     } finally {
@@ -310,7 +310,7 @@ export default function CostList({
         categories={categories}
         stages={stages}
         onUpdated={updated => {
-          setCosts(prev => prev.map(c => c.id === updated.id ? updated : c))
+          onCostsChange(costs.map(c => c.id === updated.id ? updated : c))
         }}
       />
 

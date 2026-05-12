@@ -12,7 +12,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!image) return Response.json({ error: 'Brak pliku' }, { status: 400 })
   if (image.size > 10 * 1024 * 1024) return Response.json({ error: 'Plik za duży (max 10 MB)' }, { status: 413 })
 
-  const ext = image.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  const ALLOWED_EXT   = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+  const ext = image.name.split('.').pop()?.toLowerCase() ?? ''
+  if (!ALLOWED_TYPES.includes(image.type) || !ALLOWED_EXT.includes(ext))
+    return Response.json({ error: 'Niedozwolony format — akceptowane: JPG, PNG, WEBP, HEIC' }, { status: 415 })
+
   const path = `${id}/${Date.now()}.${ext}`
   const buffer = await image.arrayBuffer()
 

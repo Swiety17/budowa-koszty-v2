@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Cost } from '@/types'
 import ProjectHeader from '@/components/app/ProjectHeader'
 import ProjectTabs from '@/components/app/ProjectTabs'
@@ -10,7 +10,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const supabase = await createClient()
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: project } = await admin
     .from('projects')

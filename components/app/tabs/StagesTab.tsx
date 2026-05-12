@@ -60,6 +60,8 @@ function StageRow({
       if (!res.ok) { toast.error('Błąd zapisu'); return }
       onUpdated(await res.json())
       setEditing(false)
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setSaving(false)
     }
@@ -73,6 +75,8 @@ function StageRow({
       onDeleted(stage.id)
       setDeleteOpen(false)
       toast.success('Etap usunięty')
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setDeleting(false)
     }
@@ -162,6 +166,8 @@ function AddStageForm({ projectId, onAdded }: { projectId: string; onAdded: (s: 
       setName('')
       setColor(COLORS[4])
       toast.success('Etap dodany')
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setSaving(false)
     }

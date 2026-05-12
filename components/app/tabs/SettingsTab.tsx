@@ -59,6 +59,8 @@ function CategoryRow({
       if (!res.ok) { toast.error('Błąd zapisu'); return }
       onUpdated(await res.json())
       setEditing(false)
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setSaving(false)
     }
@@ -72,6 +74,8 @@ function CategoryRow({
       onDeleted(cat.id)
       setDeleteOpen(false)
       toast.success('Kategoria usunięta')
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setDeleting(false)
     }
@@ -217,16 +221,22 @@ function MembersSection({
       onMembersChange([...members, await res.json()])
       setEmail('')
       toast.success('Użytkownik zaproszony')
+    } catch {
+      toast.error('Błąd połączenia')
     } finally {
       setLoading(false)
     }
   }
 
   async function remove(id: string) {
-    const res = await fetch(`/api/projects/${projectId}/members/${id}`, { method: 'DELETE' })
-    if (!res.ok) { toast.error('Błąd usuwania'); return }
-    onMembersChange(members.filter(m => m.id !== id))
-    toast.success('Usunięto dostęp')
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${id}`, { method: 'DELETE' })
+      if (!res.ok) { toast.error('Błąd usuwania'); return }
+      onMembersChange(members.filter(m => m.id !== id))
+      toast.success('Usunięto dostęp')
+    } catch {
+      toast.error('Błąd połączenia')
+    }
   }
 
   return (

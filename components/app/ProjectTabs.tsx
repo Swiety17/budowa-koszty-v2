@@ -20,7 +20,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 export default function ProjectTabs({
   projectId,
   isOwner,
-  costs,
+  costs: initialCosts,
   categories: initialCategories,
   stages: initialStages,
   members: initialMembers,
@@ -33,6 +33,7 @@ export default function ProjectTabs({
   members: BudowaMember[]
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('costs')
+  const [costs, setCosts] = useState(initialCosts)
   const [categories, setCategories] = useState(initialCategories)
   const [stages, setStages] = useState(initialStages)
   const [members, setMembers] = useState(initialMembers)
@@ -71,6 +72,7 @@ export default function ProjectTabs({
           <StagesBar costs={costs} stages={stages} />
           <CostList
             costs={costs}
+            onCostsChange={setCosts}
             projectId={projectId}
             categories={categories}
             stages={stages}
