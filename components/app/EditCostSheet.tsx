@@ -57,10 +57,30 @@ export default function EditCostSheet({
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const savedReceiptRef = useRef<string>('')
 
   useEffect(() => {
-    if (cost) setForm(costToForm(cost))
+    if (cost) {
+      setForm(costToForm(cost))
+      savedReceiptRef.current = cost.receipt_url ?? ''
+    }
   }, [cost])
+
+  async function handleOpenChange(open: boolean) {
+    if (!open && !saving) {
+      const current = form.receipt_url
+      const original = savedReceiptRef.current
+      // If user uploaded a new file but cancelled without saving, clean it up
+      if (current && current !== original) {
+        fetch(`/api/projects/${projectId}/receipts`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: current }),
+        }).catch(() => {})
+      }
+    }
+    onOpenChange(open)
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -108,6 +128,7 @@ export default function EditCostSheet({
       })
       if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
       const data = await res.json()
+      savedReceiptRef.current = data.receipt_url ?? ''
       onUpdated(data as Cost)
       onOpenChange(false)
       toast.success('Koszt zaktualizowany')
@@ -117,7 +138,7 @@ export default function EditCostSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[92dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Edytuj koszt</SheetTitle>

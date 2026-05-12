@@ -26,14 +26,29 @@ export async function authorizeProject(projectId: string, requireOwner = false):
     return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
 
   if (!isOwner) {
-    const { data: membership } = await admin
+    // Prefer user_id match (tamper-proof), fall back to email for first access
+    const { data: byUserId } = await admin
       .from('budowa_members')
       .select('id')
+      .eq('project_id', projectId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (byUserId) return { user, isOwner }
+
+    const { data: byEmail } = await admin
+      .from('budowa_members')
+      .select('id, user_id')
       .eq('project_id', projectId)
       .eq('invited_email', user.email ?? '')
       .maybeSingle()
 
-    if (!membership) return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
+    if (!byEmail) return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
+
+    // Bind user_id on first authenticated access
+    if (!byEmail.user_id) {
+      await admin.from('budowa_members').update({ user_id: user.id }).eq('id', byEmail.id)
+    }
   }
 
   return { user, isOwner }
