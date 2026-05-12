@@ -3,7 +3,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, Receipt } from 'lucide-react'
+import { ArrowLeft, Receipt, Camera, X } from 'lucide-react'
 import type { CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,12 +36,32 @@ export default function AddCostForm({
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const formRef    = useRef<HTMLFormElement>(null)
   const amountRef  = useRef<HTMLInputElement>(null)
   const dateRef    = useRef<HTMLInputElement>(null)
   const vendorRef  = useRef<HTMLInputElement>(null)
   const notesRef   = useRef<HTMLTextAreaElement>(null)
+  const fileRef    = useRef<HTMLInputElement>(null)
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch(`/api/projects/${projectId}/receipts`, { method: 'POST', body: fd })
+      if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd przesyłania'); return }
+      const { url } = await res.json()
+      setReceiptUrl(url)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   function validateName(v: string) {
     if (!v.trim()) return 'Nazwa jest wymagana'
@@ -85,6 +105,7 @@ export default function AddCostForm({
           notes:       (fd.get('notes') as string).trim() || null,
           category_id: (fd.get('category_id') as string) || null,
           stage_id:    (fd.get('stage_id') as string) || null,
+          receipt_url: receiptUrl,
         }),
       })
       if (!res.ok) {
@@ -307,6 +328,45 @@ export default function AddCostForm({
               disabled={loading}
               className="resize-none"
             />
+          </div>
+
+          {/* Receipt upload */}
+          <div className="space-y-2">
+            <Label>
+              Paragon / zdjęcie
+              <span className="text-xs text-muted-foreground ml-1.5">(opcjonalne)</span>
+            </Label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {receiptUrl ? (
+              <div className="relative w-28 h-36 rounded-xl overflow-hidden border border-border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptUrl} alt="Paragon" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setReceiptUrl(null)}
+                  className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || loading}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <Camera className="h-4 w-4 shrink-0" />
+                {uploading ? 'Przesyłanie…' : 'Dodaj zdjęcie paragonu'}
+              </button>
+            )}
           </div>
         </div>
 

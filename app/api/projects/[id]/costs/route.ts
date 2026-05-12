@@ -1,23 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-async function authorize(userId: string, projectId: string, admin: ReturnType<typeof createAdminClient>) {
-  const { data } = await admin.from('projects').select('user_id').eq('id', projectId).single()
-  return !!data && data.user_id === userId
-}
+import { authorizeProject } from '@/lib/authorizeProject'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const auth = await authorizeProject(id)
+  if (auth.error) return auth.error
+
   const admin = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
-  if (!await authorize(user.id, id, admin))
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-
   const body = await request.json()
-  const { name, amount, date, vendor, notes, category_id, stage_id } = body
+  const { name, amount, date, vendor, notes, category_id, stage_id, receipt_url } = body
   if (!name || !date || isNaN(Number(amount)))
     return Response.json({ error: 'Invalid input' }, { status: 400 })
 
@@ -33,6 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       notes: notes || null,
       category_id: category_id || null,
       stage_id: stage_id || null,
+      receipt_url: receipt_url || null,
     })
     .select('*, cost_categories(id, name, color), project_stages(id, name, color, sort_order)')
     .single()
