@@ -3,7 +3,7 @@ import { useRef, useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, Camera, ImagePlus, X, Sparkles, Loader2, Plus } from 'lucide-react'
+import { ArrowLeft, Camera, ImagePlus, X, Sparkles, Loader2, ChevronDown } from 'lucide-react'
 import type { CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -354,186 +354,188 @@ export default function AddCostForm({
           )}
         </div>
 
-        {/* ── Opcjonalne chipy ── */}
-        <div className="flex flex-wrap gap-2">
+        {/* ── Pola opcjonalne (labeled rows) ── */}
+        <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+
           {/* Wykonawca */}
-          {showVendor ? (
-            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
-              <span className="truncate max-w-28">{vendor || 'Wykonawca'}</span>
-              <button type="button" onClick={() => { setVendor(''); setShowVendor(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </span>
-          ) : (
+          <div>
             <button
               type="button"
-              onClick={() => setShowVendor(true)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+              onClick={() => setShowVendor(s => !s)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left"
             >
-              <Plus className="h-3.5 w-3.5" />
-              Wykonawca
+              <span className="text-sm text-muted-foreground w-24 shrink-0">Wykonawca</span>
+              {vendor ? (
+                <span className="flex flex-1 items-center min-w-0 gap-2">
+                  <span className="text-sm truncate flex-1">{vendor}</span>
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); setVendor(''); setShowVendor(false) }}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </span>
+                </span>
+              ) : (
+                <span className="flex flex-1 items-center justify-between">
+                  <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                  <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showVendor && 'rotate-180')} />
+                </span>
+              )}
             </button>
-          )}
+            {showVendor && (
+              <div className="px-4 pb-3">
+                <VendorInput
+                  id="vendor"
+                  value={vendor}
+                  onChange={setVendor}
+                  suggestions={vendorSuggestions}
+                  placeholder="np. Firma XYZ, Jan Kowalski…"
+                  disabled={loading || ocrLoading}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Kategoria */}
-          {(showCategory || categoryId) ? (
-            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
-              {selectedCategory ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCategory(s => !s)}
-                  className="flex items-center gap-1.5 truncate max-w-28"
-                >
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
-                  {selectedCategory.name}
-                </button>
-              ) : (
-                <span className="text-muted-foreground">Kategoria</span>
-              )}
-              <button type="button" onClick={() => { setCategoryId(''); setShowCategory(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </span>
-          ) : (
+          <div>
             <button
               type="button"
-              onClick={() => setShowCategory(true)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+              onClick={() => setShowCategory(s => !s)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left"
             >
-              <Plus className="h-3.5 w-3.5" />
-              Kategoria
+              <span className="text-sm text-muted-foreground w-24 shrink-0">Kategoria</span>
+              {selectedCategory ? (
+                <span className="flex flex-1 items-center min-w-0 gap-2">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
+                  <span className="text-sm truncate flex-1">{selectedCategory.name}</span>
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); setCategoryId(''); setShowCategory(false) }}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </span>
+                </span>
+              ) : (
+                <span className="flex flex-1 items-center justify-between">
+                  <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                  <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showCategory && 'rotate-180')} />
+                </span>
+              )}
             </button>
-          )}
+            {showCategory && categories.length > 0 && (
+              <div className="px-4 pb-3 flex flex-wrap gap-2">
+                {categories.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setCategoryId(categoryId === c.id ? '' : c.id); setShowCategory(false) }}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                      categoryId === c.id
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
+                    )}
+                  >
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Etap */}
           {stages.length > 0 && (
-            (showStage || stageId) ? (
-              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowStage(s => !s)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left"
+              >
+                <span className="text-sm text-muted-foreground w-24 shrink-0">Etap</span>
                 {selectedStage ? (
+                  <span className="flex flex-1 items-center min-w-0 gap-2">
+                    <span className="text-sm truncate flex-1">{selectedStage.name}</span>
+                    <span
+                      role="button"
+                      onClick={e => { e.stopPropagation(); setStageId(''); setShowStage(false) }}
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex flex-1 items-center justify-between">
+                    <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                    <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showStage && 'rotate-180')} />
+                  </span>
+                )}
+              </button>
+              {showStage && (
+                <div className="px-4 pb-3 flex flex-wrap gap-2">
+                  {stages.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => { setStageId(stageId === s.id ? '' : s.id); setShowStage(false) }}
+                      className={cn(
+                        'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                        stageId === s.id
+                          ? 'bg-foreground text-background border-foreground'
+                          : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
+                      )}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notatki */}
+          <div>
+            {showNotes ? (
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Notatki</span>
                   <button
                     type="button"
-                    onClick={() => setShowStage(s => !s)}
-                    className="truncate max-w-28"
+                    onClick={() => { setNotes(''); setShowNotes(false) }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {selectedStage.name}
+                    Usuń
                   </button>
-                ) : (
-                  <span className="text-muted-foreground">Etap</span>
-                )}
-                <button type="button" onClick={() => { setStageId(''); setShowStage(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
+                </div>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Nr faktury, pozycje, dodatkowe informacje…"
+                  maxLength={500}
+                  disabled={loading || ocrLoading}
+                  className="resize-none"
+                />
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={() => setShowStage(true)}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+                onClick={() => setShowNotes(true)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left"
               >
-                <Plus className="h-3.5 w-3.5" />
-                Etap
+                <span className="text-sm text-muted-foreground w-24 shrink-0">Notatki</span>
+                <span className="flex flex-1 items-center justify-between">
+                  <span className="text-sm text-muted-foreground/60">Nie dodano</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </span>
               </button>
-            )
-          )}
+            )}
+          </div>
+
         </div>
-
-        {/* Wykonawca — rozwinięte */}
-        {showVendor && (
-          <VendorInput
-            id="vendor"
-            value={vendor}
-            onChange={setVendor}
-            suggestions={vendorSuggestions}
-            placeholder="np. Firma XYZ, Jan Kowalski…"
-            disabled={loading || ocrLoading}
-          />
-        )}
-
-        {/* Kategoria — rozwinięte (kolorowe piluły) */}
-        {showCategory && categories.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {categories.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  const next = categoryId === c.id ? '' : c.id
-                  setCategoryId(next)
-                  if (next) setShowCategory(false)
-                }}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
-                  categoryId === c.id
-                    ? 'bg-foreground text-background border-foreground'
-                    : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
-                )}
-              >
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Etap — rozwinięte */}
-        {showStage && stages.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {stages.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  const next = stageId === s.id ? '' : s.id
-                  setStageId(next)
-                  if (next) setShowStage(false)
-                }}
-                className={cn(
-                  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
-                  stageId === s.id
-                    ? 'bg-foreground text-background border-foreground'
-                    : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
-                )}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Uwagi — toggle */}
-        {showNotes ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notes" className="text-sm">Uwagi</Label>
-              <button
-                type="button"
-                onClick={() => { setNotes(''); setShowNotes(false) }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Usuń
-              </button>
-            </div>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Nr faktury, pozycje, dodatkowe informacje…"
-              maxLength={500}
-              disabled={loading || ocrLoading}
-              className="resize-none"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowNotes(true)}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Dodaj uwagi
-          </button>
-        )}
 
         {/* Submit — desktop */}
         <div className="mt-8 hidden md:block">
