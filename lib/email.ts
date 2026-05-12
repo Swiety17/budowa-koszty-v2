@@ -1,8 +1,14 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+})
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'Budowa Koszty <onboarding@resend.dev>'
+const FROM = `Budowa Koszty <${process.env.GMAIL_USER}>`
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://budowa-koszty.vercel.app'
 
 export async function sendInvitationEmail({
@@ -16,7 +22,7 @@ export async function sendInvitationEmail({
 }) {
   const loginUrl = `${APP_URL}/login`
 
-  const { error } = await resend.emails.send({
+  await transporter.sendMail({
     from: FROM,
     to: toEmail,
     subject: `Zaproszenie do projektu "${projectName}" — Budowa Koszty`,
@@ -29,14 +35,12 @@ export async function sendInvitationEmail({
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
 
-        <!-- Header -->
         <tr>
           <td style="background:#3dbdaa;padding:28px 32px;text-align:center;">
             <span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Budowa Koszty</span>
           </td>
         </tr>
 
-        <!-- Body -->
         <tr>
           <td style="padding:32px;">
             <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Masz zaproszenie!</p>
@@ -49,7 +53,7 @@ export async function sendInvitationEmail({
             </div>
 
             <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-              Zaloguj się (lub utwórz konto z <strong>${toEmail}</strong>), by zobaczyć projekt.
+              Zaloguj się (lub utwórz konto z adresem <strong>${toEmail}</strong>), by zobaczyć projekt.
               Dostęp zostanie przyznany automatycznie po zalogowaniu.
             </p>
 
@@ -66,7 +70,6 @@ export async function sendInvitationEmail({
           </td>
         </tr>
 
-        <!-- Footer -->
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #f3f4f6;text-align:center;">
             <p style="margin:0;font-size:12px;color:#9ca3af;">
@@ -81,6 +84,4 @@ export async function sendInvitationEmail({
 </body>
 </html>`,
   })
-
-  if (error) throw new Error(`Resend error: ${error.message}`)
 }
