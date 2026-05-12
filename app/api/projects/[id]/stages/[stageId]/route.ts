@@ -12,7 +12,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { data, error } = await admin
     .from('project_stages')
-    .update({ name: body.name.trim(), color: body.color ?? '#6b7280' })
+    .update({
+      name: body.name.trim(),
+      color: body.color ?? '#6b7280',
+      budget: typeof body.budget === 'number' && body.budget > 0 ? body.budget : null,
+    })
     .eq('id', stageId)
     .eq('project_id', id)
     .select()

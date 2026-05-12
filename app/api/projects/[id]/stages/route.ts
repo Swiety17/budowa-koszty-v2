@@ -37,7 +37,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data, error } = await admin
     .from('project_stages')
-    .insert({ project_id: id, name: body.name.trim(), color: body.color ?? '#6b7280', sort_order: nextOrder })
+    .insert({
+      project_id: id,
+      name: body.name.trim(),
+      color: body.color ?? '#6b7280',
+      sort_order: nextOrder,
+      budget: typeof body.budget === 'number' && body.budget > 0 ? body.budget : null,
+    })
     .select()
     .single()
 
