@@ -376,13 +376,17 @@ export default function AddCostForm({
           )}
 
           {/* Kategoria */}
-          {showCategory ? (
+          {(showCategory || categoryId) ? (
             <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
               {selectedCategory ? (
-                <span className="flex items-center gap-1.5 truncate max-w-28">
+                <button
+                  type="button"
+                  onClick={() => setShowCategory(s => !s)}
+                  className="flex items-center gap-1.5 truncate max-w-28"
+                >
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
                   {selectedCategory.name}
-                </span>
+                </button>
               ) : (
                 <span className="text-muted-foreground">Kategoria</span>
               )}
@@ -403,9 +407,19 @@ export default function AddCostForm({
 
           {/* Etap */}
           {stages.length > 0 && (
-            showStage ? (
+            (showStage || stageId) ? (
               <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm border border-foreground/30 bg-muted">
-                <span className="truncate max-w-28">{selectedStage?.name ?? 'Etap'}</span>
+                {selectedStage ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowStage(s => !s)}
+                    className="truncate max-w-28"
+                  >
+                    {selectedStage.name}
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground">Etap</span>
+                )}
                 <button type="button" onClick={() => { setStageId(''); setShowStage(false) }} className="ml-0.5 text-muted-foreground hover:text-foreground shrink-0">
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -442,7 +456,11 @@ export default function AddCostForm({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setCategoryId(prev => prev === c.id ? '' : c.id)}
+                onClick={() => {
+                  const next = categoryId === c.id ? '' : c.id
+                  setCategoryId(next)
+                  if (next) setShowCategory(false)
+                }}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
                   categoryId === c.id
@@ -464,7 +482,11 @@ export default function AddCostForm({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => setStageId(prev => prev === s.id ? '' : s.id)}
+                onClick={() => {
+                  const next = stageId === s.id ? '' : s.id
+                  setStageId(next)
+                  if (next) setShowStage(false)
+                }}
                 className={cn(
                   'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
                   stageId === s.id
@@ -516,7 +538,7 @@ export default function AddCostForm({
         {/* Submit — desktop */}
         <div className="mt-8 hidden md:block">
           <Button type="submit" className="w-full" size="lg" disabled={loading || ocrLoading}>
-            {loading ? 'Zapisywanie…' : ocrLoading ? 'Odczytuję paragon…' : 'Dodaj koszt'}
+            {loading ? 'Zapisywanie…' : ocrLoading ? 'Odczytuję paragon…' : 'Zapisz koszt'}
           </Button>
         </div>
       </form>
