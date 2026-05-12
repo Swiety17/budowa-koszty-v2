@@ -1,13 +1,14 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { Camera, X } from 'lucide-react'
+import { Camera, X, Sparkles } from 'lucide-react'
 import type { Cost, CostCategory, ProjectStage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import VendorInput from './VendorInput'
 
 type Form = {
   name: string
@@ -56,6 +57,8 @@ export default function EditCostSheet({
   })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [ocrDone, setOcrDone] = useState(false)
+  const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const savedReceiptRef = useRef<string>('')
 
@@ -63,8 +66,18 @@ export default function EditCostSheet({
     if (cost) {
       setForm(costToForm(cost))
       savedReceiptRef.current = cost.receipt_url ?? ''
+      setOcrDone(false)
     }
   }, [cost])
+
+  useEffect(() => {
+    if (open) {
+      fetch(`/api/projects/${projectId}/vendors`)
+        .then(r => r.ok ? r.json() : [])
+        .then(setVendorSuggestions)
+        .catch(() => {})
+    }
+  }, [open, projectId])
 
   async function handleOpenChange(open: boolean) {
     if (!open && !saving) {
@@ -86,6 +99,7 @@ export default function EditCostSheet({
     const file = e.target.files?.[0]
     if (!file || !cost) return
     setUploading(true)
+    setOcrDone(false)
     try {
       const fd = new FormData()
       fd.append('image', file)
@@ -93,6 +107,30 @@ export default function EditCostSheet({
       if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd przesyłania'); return }
       const { url } = await res.json()
       set('receipt_url', url)
+
+      // OCR: auto-fill only empty fields
+      const ocrFd = new FormData()
+      ocrFd.append('image', file)
+      const ocrRes = await fetch('/api/ocr', { method: 'POST', body: ocrFd })
+      if (ocrRes.ok) {
+        const ocr = await ocrRes.json()
+        // Read current form state directly (not via updater) to decide what to fill
+        setForm(prev => {
+          const next = { ...prev }
+          if (ocr.name && !prev.name) next.name = ocr.name
+          if (ocr.vendor && !prev.vendor) next.vendor = ocr.vendor
+          if (ocr.amount && !prev.amount) next.amount = String(ocr.amount)
+          if (ocr.date && !prev.date) next.date = ocr.date
+          return next
+        })
+        // Check against form snapshot captured when async fn started
+        const wouldFill =
+          (ocr.name && !form.name) ||
+          (ocr.vendor && !form.vendor) ||
+          (ocr.amount && !form.amount) ||
+          (ocr.date && !form.date)
+        if (wouldFill) setOcrDone(true)
+      }
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -191,11 +229,13 @@ export default function EditCostSheet({
 
           <div className="space-y-2">
             <Label htmlFor="ec-vendor">Wykonawca / dostawca</Label>
-            <Input
+            <VendorInput
               id="ec-vendor"
               value={form.vendor}
-              onChange={e => set('vendor', e.target.value)}
+              onChange={v => set('vendor', v)}
+              suggestions={vendorSuggestions}
               placeholder="np. Firma XYZ"
+              disabled={saving || uploading}
             />
           </div>
 
@@ -261,6 +301,12 @@ export default function EditCostSheet({
                   <img src={form.receipt_url} alt="Paragon" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col gap-2 pt-1">
+                  {ocrDone && (
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      <Sparkles className="h-3 w-3" />
+                      Dane odczytane
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
@@ -272,7 +318,7 @@ export default function EditCostSheet({
                   </button>
                   <button
                     type="button"
-                    onClick={() => set('receipt_url', '')}
+                    onClick={() => { set('receipt_url', ''); setOcrDone(false) }}
                     className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -288,7 +334,7 @@ export default function EditCostSheet({
                 className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors disabled:opacity-50 w-full"
               >
                 <Camera className="h-4 w-4 shrink-0" />
-                {uploading ? 'Przesyłanie…' : 'Dodaj zdjęcie paragonu'}
+                {uploading ? 'Przesyłanie i odczytywanie…' : 'Dodaj zdjęcie paragonu'}
               </button>
             )}
           </div>

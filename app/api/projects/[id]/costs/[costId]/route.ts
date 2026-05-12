@@ -29,6 +29,12 @@ export async function PATCH(
     oldReceiptUrl = current?.receipt_url ?? null
   }
 
+  // Upsert vendor before updating cost
+  if (vendor?.trim()) {
+    await admin.from('vendors').insert({ user_id: auth.user.id, name: vendor.trim() })
+    // ignore error — unique constraint = already exists
+  }
+
   const update: Record<string, unknown> = {
     name,
     amount: Number(amount),

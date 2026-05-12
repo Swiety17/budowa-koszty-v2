@@ -176,6 +176,12 @@ textarea {
 .mb-safe  { margin-bottom:  var(--safe-bottom); }
 .pt-safe  { padding-top:    var(--safe-top); }
 
+/* ─── PWA standalone: Dynamic Island / notch spacer ──────── */
+.pwa-safe-top { height: 0; }
+@media (display-mode: standalone) {
+  .pwa-safe-top { height: env(safe-area-inset-top, 0px); }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -43,11 +43,21 @@ export default function CostList({
   const searchParams = useSearchParams()
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [vendorFilter, setVendorFilter] = useState('')
   const [editingCost, setEditingCost] = useState<Cost | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const stageId = searchParams.get('etap') ?? ''
+
+  // Vendors with totals, sorted by spending desc
+  const vendorTotals = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const c of costs) {
+      if (c.vendor) map.set(c.vendor, (map.get(c.vendor) ?? 0) + Number(c.amount))
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1])
+  }, [costs])
 
   const filteredCosts = useMemo(() => {
     return costs.filter(cost => {
@@ -60,12 +70,13 @@ export default function CostList({
         if (!hit) return false
       }
       if (categoryId && cost.category_id !== categoryId) return false
+      if (vendorFilter && cost.vendor !== vendorFilter) return false
       if (stageId === '__unassigned__') {
         if (cost.stage_id !== null) return false
       } else if (stageId && cost.stage_id !== stageId) return false
       return true
     })
-  }, [costs, search, categoryId, stageId])
+  }, [costs, search, categoryId, vendorFilter, stageId])
 
   const grouped = useMemo(() => {
     const map = new Map<string, Cost[]>()
@@ -79,11 +90,12 @@ export default function CostList({
   }, [filteredCosts])
 
   const filteredTotal = filteredCosts.reduce((s, c) => s + Number(c.amount), 0)
-  const isFiltered = !!(search || categoryId || stageId)
+  const isFiltered = !!(search || categoryId || vendorFilter || stageId)
 
   function clearFilters() {
     setSearch('')
     setCategoryId('')
+    setVendorFilter('')
     if (stageId) {
       const params = new URLSearchParams(searchParams.toString())
       params.delete('etap')
@@ -141,7 +153,7 @@ export default function CostList({
 
       {/* Category pills */}
       {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
           <button
             onClick={() => setCategoryId('')}
             className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
@@ -172,11 +184,44 @@ export default function CostList({
         </div>
       )}
 
+      {/* Vendor pills — sorted by spending */}
+      {vendorTotals.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+          <button
+            onClick={() => setVendorFilter('')}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+              !vendorFilter
+                ? 'bg-foreground text-background border-foreground'
+                : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
+            }`}
+          >
+            Wykonawcy
+          </button>
+          {vendorTotals.map(([vendor, total]) => (
+            <button
+              key={vendor}
+              onClick={() => setVendorFilter(prev => prev === vendor ? '' : vendor)}
+              className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                vendorFilter === vendor
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
+              }`}
+            >
+              {vendor}
+              <span className={`tabular-nums ${vendorFilter === vendor ? 'opacity-80' : 'opacity-60'}`}>
+                {formatCurrency(total)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filter summary */}
       {isFiltered && (
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">
             {filteredCosts.length} z {costs.length} kosztów
+            {vendorFilter && <span> · <strong className="text-foreground">{vendorFilter}</strong></span>}
             {stageId && <span> · filtr etapu</span>}
           </p>
           <button

@@ -1,6 +1,8 @@
 'use client'
+import { useRef } from 'react'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
+import PullToRefresh from '@/components/app/PullToRefresh'
 
 export default function AppShell({
   children,
@@ -9,12 +11,16 @@ export default function AppShell({
   children: React.ReactNode
   userEmail: string
 }) {
+  const mainRef = useRef<HTMLElement>(null)
+
   return (
-    <div className="flex min-h-dvh bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <Sidebar userEmail={userEmail} />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overscroll-none p-4 md:p-6">
+        {/* Spacer for Dynamic Island / notch in PWA standalone mode */}
+        <div className="pwa-safe-top" aria-hidden="true" />
         <div className="max-w-5xl mx-auto">
           {children}
         </div>
@@ -25,6 +31,8 @@ export default function AppShell({
           aria-hidden="true"
         />
       </main>
+
+      <PullToRefresh scrollRef={mainRef} />
 
       {/* Mobile bottom nav */}
       <BottomNav userEmail={userEmail} />

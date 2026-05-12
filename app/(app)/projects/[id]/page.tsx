@@ -64,7 +64,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     <div className="space-y-4">
       <ProjectHeader project={project} total={total} isOwner={isOwner} />
       <ProjectTabs
-        projectId={id}
+        project={project}
         isOwner={isOwner}
         costs={costs ?? []}
         categories={categories ?? []}

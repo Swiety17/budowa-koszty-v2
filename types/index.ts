@@ -65,6 +65,7 @@ export type ProjectStage = {
   name: string
   color: string
   sort_order: number
+  budget: number | null
   created_at: string
 }
 

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Receipt, Layers, Camera, Settings } from 'lucide-react'
-import type { Cost, CostCategory, ProjectStage, BudowaMember } from '@/types'
+import type { Cost, CostCategory, Project, ProjectStage, BudowaMember } from '@/types'
 import CostList from './CostList'
 import StagesBar from './StagesBar'
 import StagesTab from './tabs/StagesTab'
@@ -18,14 +18,14 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 ]
 
 export default function ProjectTabs({
-  projectId,
+  project,
   isOwner,
   costs: initialCosts,
   categories: initialCategories,
   stages: initialStages,
   members: initialMembers,
 }: {
-  projectId: string
+  project: Project
   isOwner: boolean
   costs: Cost[]
   categories: CostCategory[]
@@ -73,7 +73,7 @@ export default function ProjectTabs({
           <CostList
             costs={costs}
             onCostsChange={setCosts}
-            projectId={projectId}
+            projectId={project.id}
             categories={categories}
             stages={stages}
             isOwner={isOwner}
@@ -82,8 +82,9 @@ export default function ProjectTabs({
       )}
       {activeTab === 'stages' && (
         <StagesTab
-          projectId={projectId}
+          projectId={project.id}
           stages={stages}
+          costs={costs}
           onStagesChange={setStages}
         />
       )}
@@ -92,7 +93,7 @@ export default function ProjectTabs({
       )}
       {activeTab === 'settings' && (
         <SettingsTab
-          projectId={projectId}
+          projectId={project.id}
           isOwner={isOwner}
           categories={categories}
           onCategoriesChange={setCategories}

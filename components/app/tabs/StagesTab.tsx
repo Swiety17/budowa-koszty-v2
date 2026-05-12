@@ -2,9 +2,11 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, Check, X, Layers } from 'lucide-react'
-import type { ProjectStage } from '@/types'
+import type { Cost, ProjectStage } from '@/types'
+import { formatCurrency } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
@@ -13,6 +15,13 @@ const COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e',
   '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280',
 ]
+
+function parseBudget(raw: string): number | null {
+  const cleaned = raw.trim().replace(/\s/g, '').replace(',', '.')
+  if (!cleaned) return null
+  const n = Number(cleaned)
+  return isNaN(n) || n <= 0 ? null : n
+}
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -30,13 +39,36 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
   )
 }
 
+function StageBudgetMini({ spent, budget, color }: { spent: number; budget: number; color: string }) {
+  const pct = Math.min((spent / budget) * 100, 100)
+  const over = spent > budget
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: over ? '#ef4444' : color }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {formatCurrency(spent)}
+        <span className="mx-1">/</span>
+        {formatCurrency(budget)}
+        {over && <span className="text-destructive font-medium ml-1.5">Przekroczony!</span>}
+      </p>
+    </div>
+  )
+}
+
 function StageRow({
   stage,
+  spent,
   projectId,
   onUpdated,
   onDeleted,
 }: {
   stage: ProjectStage
+  spent: number
   projectId: string
   onUpdated: (s: ProjectStage) => void
   onDeleted: (id: string) => void
@@ -44,6 +76,7 @@ function StageRow({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(stage.name)
   const [color, setColor] = useState(stage.color)
+  const [budget, setBudget] = useState(stage.budget ? String(stage.budget) : '')
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -55,7 +88,7 @@ function StageRow({
       const res = await fetch(`/api/projects/${projectId}/stages/${stage.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({ name: name.trim(), color, budget: parseBudget(budget) }),
       })
       if (!res.ok) { toast.error('Błąd zapisu'); return }
       onUpdated(await res.json())
@@ -65,6 +98,13 @@ function StageRow({
     } finally {
       setSaving(false)
     }
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setName(stage.name)
+    setColor(stage.color)
+    setBudget(stage.budget ? String(stage.budget) : '')
   }
 
   async function remove() {
@@ -92,13 +132,28 @@ function StageRow({
           autoFocus
           maxLength={80}
         />
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Budżet etapu</Label>
+          <div className="relative">
+            <Input
+              value={budget}
+              onChange={e => setBudget(e.target.value)}
+              inputMode="decimal"
+              placeholder="Brak"
+              className="pr-14"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              PLN
+            </span>
+          </div>
+        </div>
         <ColorPicker value={color} onChange={setColor} />
         <div className="flex gap-2">
           <Button size="sm" onClick={save} disabled={saving}>
             <Check className="h-3.5 w-3.5 mr-1" />
             {saving ? 'Zapisuję…' : 'Zapisz'}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(stage.name); setColor(stage.color) }}>
+          <Button size="sm" variant="ghost" onClick={cancelEdit}>
             <X className="h-3.5 w-3.5 mr-1" />
             Anuluj
           </Button>
@@ -109,21 +164,35 @@ function StageRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 px-4 py-3">
-        <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-        <p className="flex-1 text-sm font-medium">{stage.name}</p>
-        <button
-          onClick={() => setEditing(true)}
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => setDeleteOpen(true)}
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">{stage.name}</p>
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {stage.budget ? (
+          <div className="ml-6">
+            <StageBudgetMini spent={spent} budget={stage.budget} color={stage.color} />
+          </div>
+        ) : (
+          <p className="ml-6 mt-1 text-xs text-muted-foreground">
+            Wydano: <span className="font-medium text-foreground">{formatCurrency(spent)}</span>
+            {' '}· brak budżetu
+          </p>
+        )}
       </div>
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -150,6 +219,7 @@ function StageRow({
 function AddStageForm({ projectId, onAdded }: { projectId: string; onAdded: (s: ProjectStage) => void }) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[4])
+  const [budget, setBudget] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function save() {
@@ -159,12 +229,13 @@ function AddStageForm({ projectId, onAdded }: { projectId: string; onAdded: (s: 
       const res = await fetch(`/api/projects/${projectId}/stages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({ name: name.trim(), color, budget: parseBudget(budget) }),
       })
       if (!res.ok) { toast.error('Błąd dodawania'); return }
       onAdded(await res.json())
       setName('')
       setColor(COLORS[4])
+      setBudget('')
       toast.success('Etap dodany')
     } catch {
       toast.error('Błąd połączenia')
@@ -183,6 +254,21 @@ function AddStageForm({ projectId, onAdded }: { projectId: string; onAdded: (s: 
         maxLength={80}
         onKeyDown={e => e.key === 'Enter' && save()}
       />
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">Budżet etapu (opcjonalnie)</Label>
+        <div className="relative">
+          <Input
+            value={budget}
+            onChange={e => setBudget(e.target.value)}
+            inputMode="decimal"
+            placeholder="Brak"
+            className="pr-14"
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+            PLN
+          </span>
+        </div>
+      </div>
       <ColorPicker value={color} onChange={setColor} />
       <Button size="sm" onClick={save} disabled={saving || !name.trim()}>
         <Plus className="h-3.5 w-3.5 mr-1" />
@@ -195,12 +281,21 @@ function AddStageForm({ projectId, onAdded }: { projectId: string; onAdded: (s: 
 export default function StagesTab({
   projectId,
   stages,
+  costs,
   onStagesChange,
 }: {
   projectId: string
   stages: ProjectStage[]
+  costs: Cost[]
   onStagesChange: (stages: ProjectStage[]) => void
 }) {
+  const spentByStage = Object.fromEntries(
+    stages.map(s => [
+      s.id,
+      costs.filter(c => c.stage_id === s.id).reduce((sum, c) => sum + Number(c.amount), 0),
+    ])
+  )
+
   return (
     <div className="space-y-4">
       {stages.length === 0 ? (
@@ -219,6 +314,7 @@ export default function StagesTab({
             <StageRow
               key={stage.id}
               stage={stage}
+              spent={spentByStage[stage.id] ?? 0}
               projectId={projectId}
               onUpdated={updated => onStagesChange(stages.map(s => s.id === updated.id ? updated : s))}
               onDeleted={id => onStagesChange(stages.filter(s => s.id !== id))}

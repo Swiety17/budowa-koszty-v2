@@ -12,6 +12,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!name || !date || isNaN(Number(amount)))
     return Response.json({ error: 'Invalid input' }, { status: 400 })
 
+  // Upsert vendor before cost so the operation is always atomic in the right order
+  if (vendor?.trim()) {
+    await admin.from('vendors').insert({ user_id: auth.user.id, name: vendor.trim() })
+    // ignore error — unique constraint violation means vendor already exists
+  }
+
   const { data, error } = await admin
     .from('costs')
     .insert({
