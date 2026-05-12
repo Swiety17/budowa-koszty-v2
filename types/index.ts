@@ -101,3 +101,23 @@ export type CostImportRow = {
   // only set after failed validation
   _error?: string
 }
+
+export type InspirationRoom =
+  | 'Salon' | 'Kuchnia' | 'Łazienka' | 'Sypialnia'
+  | 'Taras' | 'Elewacja' | 'Ogród' | 'Inne'
+
+export const INSPIRATION_ROOMS: InspirationRoom[] = [
+  'Salon', 'Kuchnia', 'Łazienka', 'Sypialnia',
+  'Taras', 'Elewacja', 'Ogród', 'Inne',
+]
+
+export type Inspiration = {
+  id: string
+  project_id: string
+  room: InspirationRoom
+  url: string
+  title: string | null
+  thumbnail_url: string | null
+  notes: string | null
+  created_at: string
+}

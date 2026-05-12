@@ -37,6 +37,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     { data: categories },
     { data: stages },
     { data: members },
+    { data: inspirations },
   ] = await Promise.all([
     admin
       .from('costs')
@@ -56,6 +57,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     isOwner
       ? admin.from('budowa_members').select('*').eq('project_id', id).order('created_at')
       : Promise.resolve({ data: [] }),
+    admin
+      .from('inspirations')
+      .select('*')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false }),
   ])
 
   const total = (costs ?? []).reduce((sum: number, c: Cost) => sum + Number(c.amount), 0)
@@ -70,6 +76,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         categories={categories ?? []}
         stages={stages ?? []}
         members={members ?? []}
+        inspirations={inspirations ?? []}
       />
     </div>
   )

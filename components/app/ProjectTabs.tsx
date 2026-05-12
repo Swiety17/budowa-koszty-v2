@@ -1,38 +1,49 @@
 'use client'
-import { useState } from 'react'
-import { Receipt, Layers, Camera, Settings } from 'lucide-react'
-import type { Cost, CostCategory, Project, ProjectStage, BudowaMember } from '@/types'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Receipt, Layers, Camera, Settings, Lightbulb } from 'lucide-react'
+import type { Cost, CostCategory, Project, ProjectStage, BudowaMember, Inspiration } from '@/types'
 import CostList from './CostList'
 import StagesBar from './StagesBar'
 import StagesTab from './tabs/StagesTab'
 import ReceiptsTab from './tabs/ReceiptsTab'
 import SettingsTab from './tabs/SettingsTab'
+import InspirationsTab from './tabs/InspirationsTab'
 
-type Tab = 'costs' | 'stages' | 'receipts' | 'settings'
+type Tab = 'costs' | 'stages' | 'receipts' | 'inspirations' | 'settings'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'costs',    label: 'Koszty',     icon: Receipt  },
-  { id: 'stages',   label: 'Etapy',      icon: Layers   },
-  { id: 'receipts', label: 'Paragony',   icon: Camera   },
-  { id: 'settings', label: 'Ustawienia', icon: Settings },
+  { id: 'costs',        label: 'Koszty',      icon: Receipt   },
+  { id: 'stages',       label: 'Etapy',       icon: Layers    },
+  { id: 'receipts',     label: 'Paragony',    icon: Camera    },
+  { id: 'inspirations', label: 'Inspiracje',  icon: Lightbulb },
+  { id: 'settings',     label: 'Ustawienia',  icon: Settings  },
 ]
 
-export default function ProjectTabs({
-  project,
-  isOwner,
-  costs: initialCosts,
-  categories: initialCategories,
-  stages: initialStages,
-  members: initialMembers,
-}: {
+type Props = {
   project: Project
   isOwner: boolean
   costs: Cost[]
   categories: CostCategory[]
   stages: ProjectStage[]
   members: BudowaMember[]
-}) {
-  const [activeTab, setActiveTab] = useState<Tab>('costs')
+  inspirations: Inspiration[]
+}
+
+function ProjectTabsInner({
+  project,
+  isOwner,
+  costs: initialCosts,
+  categories: initialCategories,
+  stages: initialStages,
+  members: initialMembers,
+  inspirations: initialInspirations,
+}: Props) {
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get('tab') as Tab | null) ?? 'costs'
+  const [activeTab, setActiveTab] = useState<Tab>(
+    TABS.some(t => t.id === initialTab) ? initialTab : 'costs'
+  )
   const [costs, setCosts] = useState(initialCosts)
   const [categories, setCategories] = useState(initialCategories)
   const [stages, setStages] = useState(initialStages)
@@ -91,6 +102,12 @@ export default function ProjectTabs({
       {activeTab === 'receipts' && (
         <ReceiptsTab costs={costs} />
       )}
+      {activeTab === 'inspirations' && (
+        <InspirationsTab
+          projectId={project.id}
+          initialInspirations={initialInspirations}
+        />
+      )}
       {activeTab === 'settings' && (
         <SettingsTab
           projectId={project.id}
@@ -102,5 +119,13 @@ export default function ProjectTabs({
         />
       )}
     </div>
+  )
+}
+
+export default function ProjectTabs(props: Props) {
+  return (
+    <Suspense>
+      <ProjectTabsInner {...props} />
+    </Suspense>
   )
 }
