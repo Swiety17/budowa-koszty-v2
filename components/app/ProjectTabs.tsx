@@ -27,7 +27,6 @@ type Props = {
   categories: CostCategory[]
   stages: ProjectStage[]
   members: BudowaMember[]
-  inspirations: Inspiration[]
 }
 
 function ProjectTabsInner({
@@ -37,7 +36,6 @@ function ProjectTabsInner({
   categories: initialCategories,
   stages: initialStages,
   members: initialMembers,
-  inspirations: initialInspirations,
 }: Props) {
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as Tab | null) ?? 'costs'
@@ -103,10 +101,7 @@ function ProjectTabsInner({
         <ReceiptsTab costs={costs} />
       )}
       {activeTab === 'inspirations' && (
-        <InspirationsTab
-          projectId={project.id}
-          initialInspirations={initialInspirations}
-        />
+        <InspirationsTab projectId={project.id} />
       )}
       {activeTab === 'settings' && (
         <SettingsTab

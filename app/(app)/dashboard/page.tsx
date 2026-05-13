@@ -15,31 +15,26 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: memberRows }, { data: ownProjects }] = await Promise.all([
-    admin
-      .from('budowa_members')
-      .select('project_id')
-      .eq('invited_email', user.email ?? ''),
+  const [{ data: ownProjects }, { data: sharedProjectsRaw }] = await Promise.all([
     admin
       .from('projects')
       .select('*, costs(amount)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
+    admin
+      .from('projects')
+      .select('*, costs(amount), budowa_members!inner(project_id)')
+      .eq('budowa_members.invited_email', user.email ?? '')
+      .neq('user_id', user.id)
+      .order('created_at', { ascending: false }),
   ])
 
-  const sharedIds = new Set((memberRows ?? []).map((r: { project_id: string }) => r.project_id))
-
-  const { data: sharedProjects } = sharedIds.size
-    ? await admin
-        .from('projects')
-        .select('*, costs(amount)')
-        .in('id', [...sharedIds])
-        .order('created_at', { ascending: false })
-    : { data: [] }
+  const sharedProjects = (sharedProjectsRaw ?? []) as ProjectWithCosts[]
+  const sharedIds = new Set(sharedProjects.map(p => p.id))
 
   const allProjects = [
     ...(ownProjects ?? []) as ProjectWithCosts[],
-    ...(sharedProjects ?? []) as ProjectWithCosts[],
+    ...sharedProjects,
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   const totals: Record<string, number> = {}

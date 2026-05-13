@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { Camera } from 'lucide-react'
 import type { Cost } from '@/types'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, toReceiptThumbnail } from '@/lib/format'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -36,11 +37,12 @@ export default function ReceiptsTab({ costs }: { costs: Cost[] }) {
             onClick={() => setLightbox(cost)}
             className="group relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-muted hover:border-foreground/30 transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={cost.receipt_url!}
+            <Image
+              src={toReceiptThumbnail(cost.receipt_url!)}
               alt={cost.name}
-              className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, 33vw"
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-left">
               <p className="text-xs font-semibold text-white leading-snug line-clamp-1">{cost.name}</p>
@@ -56,12 +58,15 @@ export default function ReceiptsTab({ costs }: { costs: Cost[] }) {
             <DialogTitle className="text-base">{lightbox?.name}</DialogTitle>
           </DialogHeader>
           {lightbox?.receipt_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={lightbox.receipt_url}
-              alt={lightbox.name}
-              className="w-full max-h-[70dvh] object-contain bg-muted"
-            />
+            <div className="relative w-full max-h-[70dvh] min-h-[300px] bg-muted">
+              <Image
+                src={toReceiptThumbnail(lightbox.receipt_url, 1200, 90)}
+                alt={lightbox.name}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 512px"
+              />
+            </div>
           )}
           {lightbox && (
             <div className="px-4 py-3 border-t border-border flex items-center justify-between text-sm text-muted-foreground">

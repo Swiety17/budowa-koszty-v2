@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -14,7 +14,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
-import EditCostSheet from './EditCostSheet'
+import dynamic from 'next/dynamic'
+
+const EditCostSheet = dynamic(() => import('./EditCostSheet'), { ssr: false })
 
 function monthLabel(key: string): string {
   const [year, month] = key.split('-').map(Number)
@@ -47,6 +49,14 @@ export default function CostList({
   const [editingCost, setEditingCost] = useState<Cost | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/vendors`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setVendorSuggestions(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [projectId])
 
   const stageId = searchParams.get('etap') ?? ''
 
@@ -357,6 +367,8 @@ export default function CostList({
         onUpdated={updated => {
           onCostsChange(costs.map(c => c.id === updated.id ? updated : c))
         }}
+        vendorSuggestions={vendorSuggestions}
+        onVendorAdded={v => setVendorSuggestions(prev => [...prev, v])}
       />
 
       {/* Delete Dialog */}

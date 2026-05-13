@@ -9,6 +9,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
 
+// Inspirations are fetched client-side when the tab is first activated
+// to avoid blocking the critical project page load (costs, stages).
+
 function getDomain(url: string) {
   try { return new URL(url).hostname.replace('www.', '') } catch { return url }
 }
@@ -300,21 +303,32 @@ function AddInspirationForm({ projectId, onAdded }: { projectId: string; onAdded
   )
 }
 
-export default function InspirationsTab({
-  projectId,
-  initialInspirations,
-}: {
-  projectId: string
-  initialInspirations: Inspiration[]
-}) {
-  const [items, setItems] = useState(initialInspirations)
+export default function InspirationsTab({ projectId }: { projectId: string }) {
+  const [items, setItems] = useState<Inspiration[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeRoom, setActiveRoom] = useState<InspirationRoom | 'Wszystkie'>('Wszystkie')
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/inspirations`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setItems(Array.isArray(data) ? data : []))
+      .catch(() => toast.error('Nie udało się załadować inspiracji'))
+      .finally(() => setLoading(false))
+  }, [projectId])
 
   const filtered = activeRoom === 'Wszystkie'
     ? items
     : items.filter(i => i.room === activeRoom)
 
   const roomsWithCount = INSPIRATION_ROOMS.filter(r => items.some(i => i.room === r))
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

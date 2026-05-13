@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { toast } from 'sonner'
 import { Camera, X, Sparkles } from 'lucide-react'
 import type { Cost, CostCategory, ProjectStage } from '@/types'
+import { toReceiptThumbnail } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,6 +44,8 @@ export default function EditCostSheet({
   categories,
   stages,
   onUpdated,
+  vendorSuggestions,
+  onVendorAdded,
 }: {
   cost: Cost | null
   projectId: string
@@ -50,6 +54,8 @@ export default function EditCostSheet({
   categories: CostCategory[]
   stages: ProjectStage[]
   onUpdated: (updated: Cost) => void
+  vendorSuggestions: string[]
+  onVendorAdded: (vendor: string) => void
 }) {
   const [form, setForm] = useState<Form>({
     name: '', amount: '', date: new Date().toISOString().split('T')[0],
@@ -58,7 +64,6 @@ export default function EditCostSheet({
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [ocrDone, setOcrDone] = useState(false)
-  const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const savedReceiptRef = useRef<string>('')
 
@@ -69,15 +74,6 @@ export default function EditCostSheet({
       setOcrDone(false)
     }
   }, [cost])
-
-  useEffect(() => {
-    if (open) {
-      fetch(`/api/projects/${projectId}/vendors`)
-        .then(r => r.ok ? r.json() : [])
-        .then(setVendorSuggestions)
-        .catch(() => {})
-    }
-  }, [open, projectId])
 
   async function handleOpenChange(open: boolean) {
     if (!open && !saving) {
@@ -167,6 +163,8 @@ export default function EditCostSheet({
       if (!res.ok) { const { error } = await res.json(); toast.error(error ?? 'Błąd serwera'); return }
       const data = await res.json()
       savedReceiptRef.current = data.receipt_url ?? ''
+      const vendor = form.vendor.trim()
+      if (vendor && !vendorSuggestions.includes(vendor)) onVendorAdded(vendor)
       onUpdated(data as Cost)
       onOpenChange(false)
       toast.success('Koszt zaktualizowany')
@@ -297,8 +295,13 @@ export default function EditCostSheet({
             {form.receipt_url ? (
               <div className="flex items-start gap-3">
                 <div className="relative w-24 h-32 rounded-xl overflow-hidden border border-border bg-muted shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={form.receipt_url} alt="Paragon" className="w-full h-full object-cover" />
+                  <Image
+                    src={toReceiptThumbnail(form.receipt_url)}
+                    alt="Paragon"
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                  />
                 </div>
                 <div className="flex flex-col gap-2 pt-1">
                   {ocrDone && (
