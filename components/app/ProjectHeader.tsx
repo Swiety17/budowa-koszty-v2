@@ -151,7 +151,7 @@ export default function ProjectHeader({
           <div className="space-y-1">
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
                 style={{ width: `${pct}%`, backgroundColor: barColor ?? undefined }}
               />
             </div>

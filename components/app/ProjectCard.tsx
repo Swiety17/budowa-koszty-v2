@@ -27,7 +27,7 @@ export default function ProjectCard({ id, name, address, budget, total, isShared
       aria-label={`${name} — ${formatCurrency(total)}`}
       className="block group"
     >
-      <Card className="h-full transition-shadow group-hover:shadow-md active:scale-[0.98] transition-transform">
+      <Card className="h-full transition-[box-shadow,transform] group-hover:shadow-md motion-safe:active:scale-[0.98]">
         <CardContent className="p-4 space-y-2">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">

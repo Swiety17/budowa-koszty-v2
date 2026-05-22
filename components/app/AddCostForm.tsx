@@ -221,6 +221,7 @@ export default function AddCostForm({
             )}
             <button
               type="button"
+              aria-label="Usuń zdjęcie paragonu"
               onClick={() => { setImageFile(null); setImagePreview(null); setOcrDone(false) }}
               disabled={ocrLoading}
               className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center disabled:opacity-50"
@@ -321,7 +322,7 @@ export default function AddCostForm({
                 type="button"
                 onClick={() => setDateMode(mode)}
                 className={cn(
-                  'rounded-full px-3 py-1.5 text-sm font-medium border transition-colors',
+                  'cursor-pointer rounded-full px-3 py-1.5 text-sm font-medium border transition-colors',
                   dateMode === mode
                     ? 'bg-foreground text-background border-foreground'
                     : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground',
@@ -359,30 +360,34 @@ export default function AddCostForm({
 
           {/* Wykonawca */}
           <div>
-            <button
-              type="button"
-              onClick={() => setShowVendor(s => !s)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left"
-            >
-              <span className="text-sm text-muted-foreground w-24 shrink-0">Wykonawca</span>
-              {vendor ? (
-                <span className="flex flex-1 items-center min-w-0 gap-2">
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setShowVendor(s => !s)}
+                className="flex flex-1 items-center gap-3 text-left min-w-0"
+                aria-expanded={showVendor}
+              >
+                <span className="text-sm text-muted-foreground w-24 shrink-0">Wykonawca</span>
+                {vendor ? (
                   <span className="text-sm truncate flex-1">{vendor}</span>
-                  <span
-                    role="button"
-                    onClick={e => { e.stopPropagation(); setVendor(''); setShowVendor(false) }}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
+                ) : (
+                  <span className="flex flex-1 items-center justify-between">
+                    <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                    <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showVendor && 'rotate-180')} />
                   </span>
-                </span>
-              ) : (
-                <span className="flex flex-1 items-center justify-between">
-                  <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
-                  <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showVendor && 'rotate-180')} />
-                </span>
+                )}
+              </button>
+              {vendor && (
+                <button
+                  type="button"
+                  aria-label="Usuń wykonawcę"
+                  onClick={() => { setVendor(''); setShowVendor(false) }}
+                  className="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
-            </button>
+            </div>
             {showVendor && (
               <div className="px-4 pb-3">
                 <VendorInput
@@ -399,31 +404,37 @@ export default function AddCostForm({
 
           {/* Kategoria */}
           <div>
-            <button
-              type="button"
-              onClick={() => setShowCategory(s => !s)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left"
-            >
-              <span className="text-sm text-muted-foreground w-24 shrink-0">Kategoria</span>
-              {selectedCategory ? (
-                <span className="flex flex-1 items-center min-w-0 gap-2">
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
-                  <span className="text-sm truncate flex-1">{selectedCategory.name}</span>
-                  <span
-                    role="button"
-                    onClick={e => { e.stopPropagation(); setCategoryId(''); setShowCategory(false) }}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setShowCategory(s => !s)}
+                className="flex flex-1 items-center gap-3 text-left min-w-0"
+                aria-expanded={showCategory}
+              >
+                <span className="text-sm text-muted-foreground w-24 shrink-0">Kategoria</span>
+                {selectedCategory ? (
+                  <span className="flex flex-1 items-center min-w-0 gap-1.5">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: selectedCategory.color }} />
+                    <span className="text-sm truncate">{selectedCategory.name}</span>
                   </span>
-                </span>
-              ) : (
-                <span className="flex flex-1 items-center justify-between">
-                  <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
-                  <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showCategory && 'rotate-180')} />
-                </span>
+                ) : (
+                  <span className="flex flex-1 items-center justify-between">
+                    <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                    <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showCategory && 'rotate-180')} />
+                  </span>
+                )}
+              </button>
+              {selectedCategory && (
+                <button
+                  type="button"
+                  aria-label="Usuń kategorię"
+                  onClick={() => { setCategoryId(''); setShowCategory(false) }}
+                  className="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
-            </button>
+            </div>
             {showCategory && categories.length > 0 && (
               <div className="px-4 pb-3 flex flex-wrap gap-2">
                 {categories.map(c => (
@@ -432,7 +443,7 @@ export default function AddCostForm({
                     type="button"
                     onClick={() => { setCategoryId(categoryId === c.id ? '' : c.id); setShowCategory(false) }}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                      'cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
                       categoryId === c.id
                         ? 'bg-foreground text-background border-foreground'
                         : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',
@@ -449,30 +460,34 @@ export default function AddCostForm({
           {/* Etap */}
           {stages.length > 0 && (
             <div>
-              <button
-                type="button"
-                onClick={() => setShowStage(s => !s)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left"
-              >
-                <span className="text-sm text-muted-foreground w-24 shrink-0">Etap</span>
-                {selectedStage ? (
-                  <span className="flex flex-1 items-center min-w-0 gap-2">
+              <div className="flex w-full items-center gap-3 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setShowStage(s => !s)}
+                  className="flex flex-1 items-center gap-3 text-left min-w-0"
+                  aria-expanded={showStage}
+                >
+                  <span className="text-sm text-muted-foreground w-24 shrink-0">Etap</span>
+                  {selectedStage ? (
                     <span className="text-sm truncate flex-1">{selectedStage.name}</span>
-                    <span
-                      role="button"
-                      onClick={e => { e.stopPropagation(); setStageId(''); setShowStage(false) }}
-                      className="shrink-0 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" />
+                  ) : (
+                    <span className="flex flex-1 items-center justify-between">
+                      <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
+                      <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showStage && 'rotate-180')} />
                     </span>
-                  </span>
-                ) : (
-                  <span className="flex flex-1 items-center justify-between">
-                    <span className="text-sm text-muted-foreground/60">Nie wybrano</span>
-                    <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showStage && 'rotate-180')} />
-                  </span>
+                  )}
+                </button>
+                {selectedStage && (
+                  <button
+                    type="button"
+                    aria-label="Usuń etap"
+                    onClick={() => { setStageId(''); setShowStage(false) }}
+                    className="shrink-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 )}
-              </button>
+              </div>
               {showStage && (
                 <div className="px-4 pb-3 flex flex-wrap gap-2">
                   {stages.map(s => (
@@ -481,7 +496,7 @@ export default function AddCostForm({
                       type="button"
                       onClick={() => { setStageId(stageId === s.id ? '' : s.id); setShowStage(false) }}
                       className={cn(
-                        'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
+                        'cursor-pointer inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
                         stageId === s.id
                           ? 'bg-foreground text-background border-foreground'
                           : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground',

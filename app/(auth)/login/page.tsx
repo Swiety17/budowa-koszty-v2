@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
@@ -92,16 +93,17 @@ export default function LoginPage() {
                 />
               </div>
 
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2.5">
+                <Checkbox
+                  id="remember-me"
                   checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                  onCheckedChange={setRememberMe}
                   disabled={loading}
                 />
-                <span className="text-sm text-muted-foreground">Zapamiętaj mnie</span>
-              </label>
+                <Label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer font-normal">
+                  Zapamiętaj mnie
+                </Label>
+              </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Logowanie…' : 'Zaloguj się'}

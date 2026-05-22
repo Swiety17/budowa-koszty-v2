@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Plus, Sun, Moon, LogOut } from 'lucide-react'
+import { LayoutDashboard, Plus, Sun, Moon, LogOut, CircleUser } from 'lucide-react'
 import { useTheme } from '@/lib/theme'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -46,6 +46,7 @@ export default function BottomNav({ userEmail }: { userEmail: string }) {
 
         {/* Dark mode toggle */}
         <button
+          type="button"
           onClick={toggle}
           className="flex flex-col items-center gap-1 px-4 py-2 text-xs text-muted"
         >
@@ -69,7 +70,7 @@ export default function BottomNav({ userEmail }: { userEmail: string }) {
         <Popover.Root open={profileOpen} onOpenChange={setProfileOpen}>
           <Popover.Trigger asChild>
             <button className={`flex flex-col items-center gap-1 px-4 py-2 text-xs transition-colors ${profileOpen ? 'text-accent' : 'text-muted'}`}>
-              <LogOut className="h-5 w-5" />
+              <CircleUser className="h-5 w-5" />
               Konto
             </button>
           </Popover.Trigger>

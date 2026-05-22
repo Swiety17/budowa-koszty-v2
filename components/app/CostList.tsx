@@ -153,8 +153,10 @@ export default function CostList({
         />
         {search && (
           <button
+            type="button"
+            aria-label="Wyczyść wyszukiwanie"
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -165,8 +167,9 @@ export default function CostList({
       {categories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
           <button
+            type="button"
             onClick={() => setCategoryId('')}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+            className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
               !categoryId
                 ? 'bg-foreground text-background border-foreground'
                 : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
@@ -177,8 +180,9 @@ export default function CostList({
           {categories.map(cat => (
             <button
               key={cat.id}
+              type="button"
               onClick={() => setCategoryId(prev => prev === cat.id ? '' : cat.id)}
-              className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+              className={`shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
                 categoryId === cat.id
                   ? 'bg-foreground text-background border-foreground'
                   : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
@@ -198,8 +202,9 @@ export default function CostList({
       {vendorTotals.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
           <button
+            type="button"
             onClick={() => setVendorFilter('')}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+            className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
               !vendorFilter
                 ? 'bg-foreground text-background border-foreground'
                 : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
@@ -210,8 +215,9 @@ export default function CostList({
           {vendorTotals.map(([vendor, total]) => (
             <button
               key={vendor}
+              type="button"
               onClick={() => setVendorFilter(prev => prev === vendor ? '' : vendor)}
-              className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+              className={`shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
                 vendorFilter === vendor
                   ? 'bg-foreground text-background border-foreground'
                   : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
@@ -229,14 +235,15 @@ export default function CostList({
       {/* Filter summary */}
       {isFiltered && (
         <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground" aria-live="polite" aria-atomic="true">
             {filteredCosts.length} z {costs.length} kosztów
             {vendorFilter && <span> · <strong className="text-foreground">{vendorFilter}</strong></span>}
             {stageId && <span> · filtr etapu</span>}
           </p>
           <button
+            type="button"
             onClick={clearFilters}
-            className="text-xs hover:underline"
+            className="text-xs py-1 px-2 hover:underline cursor-pointer"
             style={{ color: 'var(--color-accent)' }}
           >
             Wyczyść filtry
@@ -270,8 +277,9 @@ export default function CostList({
         <div className="text-center py-12">
           <p className="text-muted-foreground">Brak wyników dla wybranych filtrów</p>
           <button
+            type="button"
             onClick={clearFilters}
-            className="text-sm mt-1 hover:underline"
+            className="text-sm mt-1 py-1 px-2 cursor-pointer hover:underline"
             style={{ color: 'var(--color-accent)' }}
           >
             Wyczyść filtry
@@ -318,7 +326,7 @@ export default function CostList({
                     </p>
                     {/* Actions */}
                     <DropdownMenu>
-                      <DropdownMenuTrigger className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors focus:outline-none -mr-1">
+                      <DropdownMenuTrigger className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors focus:outline-none -mr-2.5">
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">Akcje</span>
                       </DropdownMenuTrigger>

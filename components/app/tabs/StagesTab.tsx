@@ -46,7 +46,7 @@ function StageBudgetMini({ spent, budget, color }: { spent: number; budget: numb
     <div className="mt-2 space-y-1">
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
           style={{ width: `${pct}%`, backgroundColor: over ? '#ef4444' : color }}
         />
       </div>
@@ -171,14 +171,18 @@ function StageRow({
             <p className="text-sm font-medium">{stage.name}</p>
           </div>
           <button
+            type="button"
+            aria-label={`Edytuj etap ${stage.name}`}
             onClick={() => setEditing(true)}
-            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            className="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
+            type="button"
+            aria-label={`Usuń etap ${stage.name}`}
             onClick={() => setDeleteOpen(true)}
-            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

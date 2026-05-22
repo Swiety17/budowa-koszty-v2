@@ -11,7 +11,7 @@ export default function BudgetBar({
 }) {
   const pct = Math.min((spent / budget) * 100, 100)
   const over = spent > budget
-  const barColor = pct < 75 ? '#22c55e' : pct < 95 ? '#f59e0b' : '#ef4444'
+  const barColor = pct < 75 ? 'var(--color-success)' : pct < 95 ? 'var(--color-warning)' : 'var(--color-danger)'
   const remaining = budget - spent
 
   return (
@@ -19,7 +19,7 @@ export default function BudgetBar({
       {label && <p className="text-xs text-muted-foreground font-medium">{label}</p>}
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
           style={{ width: `${pct}%`, backgroundColor: barColor }}
         />
       </div>
