@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { anthropic } from '@/lib/anthropic'
+
+const OCR_MAX_PER_HOUR = 10
 
 const USER_PROMPT = `Przeanalizuj ten paragon lub fakturę i zwróć JSON z polami:
 - name: zaproponuj najlepszy krótki tytuł kosztu (max 60 znaków) opisujący co zostało zakupione, np. "Cegły pełne 100 szt." lub "Materiały hydrauliczne" lub "Usługa murarska – Budmax". Zawsze zwróć coś konkretnego i po polsku. (string)
@@ -14,6 +17,18 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: allowed, error: rpcErr } = await admin.rpc('check_ocr_rate_limit', {
+    p_user_id: user.id,
+    p_max_per_hour: OCR_MAX_PER_HOUR,
+  })
+  if (rpcErr) console.error('[ocr rate limit]', rpcErr)
+  if (allowed === false)
+    return Response.json(
+      { error: `Limit OCR: max ${OCR_MAX_PER_HOUR} skanów na godzinę` },
+      { status: 429 }
+    )
 
   const formData = await request.formData()
   const image = formData.get('image') as File | null

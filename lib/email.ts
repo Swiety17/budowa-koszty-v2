@@ -1,5 +1,14 @@
 import nodemailer from 'nodemailer'
 
+function esc(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -45,15 +54,15 @@ export async function sendInvitationEmail({
           <td style="padding:32px;">
             <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Masz zaproszenie!</p>
             <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
-              <strong style="color:#111827;">${inviterEmail}</strong> zaprasza Cię do wspólnego śledzenia kosztów budowy w projekcie:
+              <strong style="color:#111827;">${esc(inviterEmail)}</strong> zaprasza Cię do wspólnego śledzenia kosztów budowy w projekcie:
             </p>
 
             <div style="background:#f3faf9;border:1px solid #3dbdaa33;border-radius:8px;padding:16px 20px;margin-bottom:28px;">
-              <p style="margin:0;font-size:17px;font-weight:600;color:#111827;">🏗 ${projectName}</p>
+              <p style="margin:0;font-size:17px;font-weight:600;color:#111827;">🏗 ${esc(projectName)}</p>
             </div>
 
             <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-              Zaloguj się (lub utwórz konto z adresem <strong>${toEmail}</strong>), by zobaczyć projekt.
+              Zaloguj się (lub utwórz konto z adresem <strong>${esc(toEmail)}</strong>), by zobaczyć projekt.
               Dostęp zostanie przyznany automatycznie po zalogowaniu.
             </p>
 

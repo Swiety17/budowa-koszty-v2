@@ -9,8 +9,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const admin = createAdminClient()
   const body = await request.json()
   const { name, amount, date, vendor, notes, category_id, stage_id, receipt_url } = body
-  if (!name || !date || isNaN(Number(amount)))
+  const amountNum = Number(amount)
+  if (!name || !date || !Number.isFinite(amountNum) || amountNum <= 0)
     return Response.json({ error: 'Invalid input' }, { status: 400 })
+
+  // Validate receipt_url belongs to this project
+  if (receipt_url) {
+    try {
+      const marker = '/storage/v1/object/public/receipts/'
+      const idx = receipt_url.indexOf(marker)
+      const path = idx !== -1 ? decodeURIComponent(receipt_url.slice(idx + marker.length)) : null
+      if (!path || !path.startsWith(`${id}/`))
+        return Response.json({ error: 'Nieprawidłowy URL paragonu' }, { status: 400 })
+    } catch {
+      return Response.json({ error: 'Nieprawidłowy URL paragonu' }, { status: 400 })
+    }
+  }
+
+  // Validate category_id belongs to this user (or is a global built-in)
+  if (category_id) {
+    const { data: cat } = await admin.from('cost_categories').select('user_id').eq('id', category_id).maybeSingle()
+    if (!cat || (cat.user_id !== null && cat.user_id !== auth.user.id))
+      return Response.json({ error: 'Nieprawidłowa kategoria' }, { status: 400 })
+  }
+
+  // Validate stage_id belongs to this project
+  if (stage_id) {
+    const { data: stage } = await admin.from('project_stages').select('project_id').eq('id', stage_id).maybeSingle()
+    if (!stage || stage.project_id !== id)
+      return Response.json({ error: 'Nieprawidłowy etap' }, { status: 400 })
+  }
 
   // Upsert vendor before cost so the operation is always atomic in the right order
   if (vendor?.trim()) {
@@ -24,7 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       id: crypto.randomUUID(),
       project_id: id,
       name,
-      amount: Number(amount),
+      amount: amountNum,
       date,
       vendor: vendor || null,
       notes: notes || null,

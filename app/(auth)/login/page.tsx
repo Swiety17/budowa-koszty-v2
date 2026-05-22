@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -20,8 +20,15 @@ export default function LoginPage() {
     const email = fd.get('email') as string
     const password = fd.get('password') as string
 
+    if (rememberMe) {
+      window.localStorage.setItem('budowa-remember-me', '1')
+    } else {
+      window.localStorage.removeItem('budowa-remember-me')
+    }
+
     setLoading(true)
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         toast.error(error.message)
@@ -84,6 +91,17 @@ export default function LoginPage() {
                   disabled={loading}
                 />
               </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                  disabled={loading}
+                />
+                <span className="text-sm text-muted-foreground">Zapamiętaj mnie</span>
+              </label>
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Logowanie…' : 'Zaloguj się'}

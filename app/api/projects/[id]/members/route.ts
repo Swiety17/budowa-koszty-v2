@@ -37,6 +37,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = await request.json()
   const email = (body.invited_email as string)?.trim().toLowerCase()
   if (!email) return Response.json({ error: 'Email wymagany' }, { status: 400 })
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return Response.json({ error: 'Nieprawidłowy adres email' }, { status: 400 })
   if (email === user.email) return Response.json({ error: 'Nie możesz zaprosić siebie' }, { status: 400 })
 
   const { data, error } = await admin
