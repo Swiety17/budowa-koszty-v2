@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MapPin } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
@@ -11,63 +10,121 @@ type Props = {
   budget?: number | null
   total: number
   isShared?: boolean
+  costCount?: number
+  stageCount?: number
 }
 
-export default function ProjectCard({ id, name, address, budget, total, isShared }: Props) {
-  const pct = budget ? Math.min((total / budget) * 100, 100) : null
-  const barColor =
+function BudgetBar({ spent, budget }: { spent: number; budget: number }) {
+  const pct = Math.min((spent / budget) * 100, 100)
+  const color =
+    pct < 75  ? 'var(--color-success)'
+    : pct < 95 ? 'var(--color-warning)'
+    :             'var(--color-danger)'
+  return (
+    <div
+      className="rounded-full overflow-hidden"
+      style={{ height: 5, background: 'var(--color-surface3)' }}
+    >
+      <div
+        className="h-full rounded-full motion-safe:transition-all motion-safe:duration-700"
+        style={{ width: `${pct}%`, background: color }}
+      />
+    </div>
+  )
+}
+
+export default function ProjectCard({ id, name, address, budget, total, isShared, costCount, stageCount }: Props) {
+  const pct = budget ? Math.min(Math.round((total / budget) * 100), 100) : null
+  const budgetColor =
     pct === null ? null
-    : pct < 75  ? 'var(--color-success)'
-    : pct < 95  ? 'var(--color-warning)'
-    :              'var(--color-danger)'
+    : pct < 75   ? 'var(--color-success)'
+    : pct < 95   ? 'var(--color-warning)'
+    :               'var(--color-danger)'
 
   return (
     <Link
       href={`/projects/${id}`}
       aria-label={`${name} — ${formatCurrency(total)}`}
-      className="block group"
+      className="block"
     >
-      <Card className="h-full transition-[box-shadow,transform] group-hover:shadow-md motion-safe:active:scale-[0.98]">
-        <CardContent className="p-4 space-y-2">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold leading-snug line-clamp-2">{name}</p>
-            {isShared && (
-              <Badge variant="secondary" className="shrink-0 text-xs">
-                Udostępniona
-              </Badge>
+      <div
+        className="px-4 py-3.5 motion-safe:active:opacity-60 transition-opacity"
+        style={{ background: 'var(--color-surface)' }}
+      >
+        {/* Name + badge */}
+        <div className="flex items-start justify-between gap-2 mb-0.5">
+          <p
+            className="font-semibold leading-snug line-clamp-2 text-base"
+            style={{ color: 'var(--color-foreground)', letterSpacing: '-0.015em' }}
+          >
+            {name}
+          </p>
+          {isShared && (
+            <Badge
+              variant="secondary"
+              className="shrink-0 text-[11px] px-2 py-0 rounded-full"
+              style={{ color: 'var(--color-accent)', background: 'var(--color-accent-light)', border: 'none' }}
+            >
+              Wspólny
+            </Badge>
+          )}
+        </div>
+
+        {/* Address */}
+        {address && (
+          <div className="flex items-center gap-1 mb-3.5" style={{ color: 'var(--color-muted)' }}>
+            <MapPin className="h-2.5 w-2.5 shrink-0" />
+            <span className="text-xs truncate">{address}</span>
+          </div>
+        )}
+
+        {/* Budget bar */}
+        {budget && <div className={address ? '' : 'mt-3'}><BudgetBar spent={total} budget={budget} /></div>}
+
+        {/* Amounts row */}
+        <div className="flex justify-between items-baseline mt-2 mb-3">
+          <div>
+            <span
+              className="text-[15px] font-semibold"
+              style={{ color: 'var(--color-foreground)', letterSpacing: '-0.02em' }}
+            >
+              {formatCurrency(total)}
+            </span>
+            {budget && (
+              <span className="text-xs ml-1.5" style={{ color: 'var(--color-muted)' }}>
+                z {formatCurrency(budget)}
+              </span>
             )}
           </div>
-
-          {/* Address */}
-          {address && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-              <MapPin className="h-3 w-3 shrink-0" />
-              {address}
-            </p>
+          {pct !== null && (
+            <span className="text-sm font-bold" style={{ color: budgetColor ?? undefined }}>
+              {pct}%
+            </span>
           )}
+        </div>
 
-          {/* Total */}
-          <p className="text-2xl font-bold" style={{ color: 'var(--color-amount)' }}>
-            {formatCurrency(total)}
-          </p>
-
-          {/* Budget bar */}
-          {budget && pct !== null && (
-            <div className="space-y-1 pt-1">
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${pct}%`, backgroundColor: barColor ?? undefined }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {Math.round(pct)}% z {formatCurrency(budget)}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Stats footer */}
+        {(costCount !== undefined || stageCount !== undefined) && (
+          <div
+            className="flex items-center gap-1.5 pt-2.5"
+            style={{ borderTop: '0.5px solid var(--color-border)' }}
+          >
+            {costCount !== undefined && (
+              <span className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
+                {costCount} kosztów
+              </span>
+            )}
+            {costCount !== undefined && stageCount !== undefined && (
+              <span className="text-xs" style={{ color: 'var(--color-subtle)' }}>·</span>
+            )}
+            {stageCount !== undefined && (
+              <span className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
+                {stageCount} etapów
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </Link>
   )
 }

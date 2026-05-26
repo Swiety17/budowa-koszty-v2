@@ -169,11 +169,10 @@ export default function CostList({
           <button
             type="button"
             onClick={() => setCategoryId('')}
-            className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-              !categoryId
-                ? 'bg-foreground text-background border-foreground'
-                : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
-            }`}
+            className="shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            style={!categoryId
+              ? { background: 'var(--color-accent)', color: '#fff', border: '1px solid var(--color-accent)' }
+              : { background: 'transparent', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
           >
             Wszystkie
           </button>
@@ -182,15 +181,14 @@ export default function CostList({
               key={cat.id}
               type="button"
               onClick={() => setCategoryId(prev => prev === cat.id ? '' : cat.id)}
-              className={`shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-                categoryId === cat.id
-                  ? 'bg-foreground text-background border-foreground'
-                  : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
-              }`}
+              className="shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors"
+              style={categoryId === cat.id
+                ? { background: cat.color, color: '#fff', border: `1px solid ${cat.color}` }
+                : { background: 'transparent', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
             >
               <span
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: cat.color }}
+                style={{ backgroundColor: categoryId === cat.id ? 'rgba(255,255,255,0.7)' : cat.color }}
               />
               {cat.name}
             </button>
@@ -204,11 +202,10 @@ export default function CostList({
           <button
             type="button"
             onClick={() => setVendorFilter('')}
-            className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-              !vendorFilter
-                ? 'bg-foreground text-background border-foreground'
-                : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
-            }`}
+            className="shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            style={!vendorFilter
+              ? { background: 'var(--color-accent)', color: '#fff', border: '1px solid var(--color-accent)' }
+              : { background: 'transparent', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
           >
             Wykonawcy
           </button>
@@ -217,16 +214,13 @@ export default function CostList({
               key={vendor}
               type="button"
               onClick={() => setVendorFilter(prev => prev === vendor ? '' : vendor)}
-              className={`shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-                vendorFilter === vendor
-                  ? 'bg-foreground text-background border-foreground'
-                  : 'border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground'
-              }`}
+              className="shrink-0 cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors"
+              style={vendorFilter === vendor
+                ? { background: 'var(--color-accent)', color: '#fff', border: '1px solid var(--color-accent)' }
+                : { background: 'transparent', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
             >
               {vendor}
-              <span className={`tabular-nums ${vendorFilter === vendor ? 'opacity-80' : 'opacity-60'}`}>
-                {formatCurrency(total)}
-              </span>
+              <span className="tabular-nums opacity-80">{formatCurrency(total)}</span>
             </button>
           ))}
         </div>
@@ -291,59 +285,74 @@ export default function CostList({
       {grouped.map(([monthKey, monthCosts]) => {
         const monthTotal = monthCosts.reduce((s, c) => s + Number(c.amount), 0)
         return (
-          <div key={monthKey} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{monthLabel(monthKey)}</p>
-              <p className="text-xs text-muted-foreground">
+          <div key={monthKey} className="space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs font-medium uppercase" style={{ color: 'var(--color-muted)', letterSpacing: '0.03em' }}>
+                {monthLabel(monthKey)}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
                 {formatCurrency(monthTotal)} · {monthCosts.length} poz
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
-              {monthCosts.map(cost => {
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
+            >
+              {monthCosts.map((cost, ci) => {
                 const cat = cost.cost_categories
+                const initial = cat?.name?.[0]?.toUpperCase() ?? '?'
                 return (
-                  <div key={cost.id} className="flex items-center gap-3 px-4 py-3">
-                    {/* Category color dot */}
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: cat?.color ?? '#9ca3af' }}
-                    />
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-snug truncate">{cost.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {formatDate(cost.date)}
-                        {cost.vendor && ` · ${cost.vendor}`}
-                        {cat && ` · ${cat.name}`}
+                  <div key={cost.id}>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      {/* Category square with initial */}
+                      <div
+                        className="shrink-0 flex items-center justify-center rounded-lg text-xs font-bold text-white"
+                        style={{ width: 36, height: 36, background: cat?.color ?? 'var(--color-surface3)' }}
+                      >
+                        {initial}
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug truncate" style={{ color: 'var(--color-foreground)' }}>
+                          {cost.name}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: 'var(--color-muted)' }}>
+                          {formatDate(cost.date)}
+                          {cost.vendor && ` · ${cost.vendor}`}
+                          {cat && ` · ${cat.name}`}
+                        </p>
+                      </div>
+                      {/* Amount */}
+                      <p
+                        className="text-sm font-semibold shrink-0 tabular-nums"
+                        style={{ color: 'var(--color-foreground)' }}
+                      >
+                        {formatCurrency(Number(cost.amount))}
                       </p>
+                      {/* Actions */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors focus:outline-none -mr-2" style={{ color: 'var(--color-muted)' }}>
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Akcje</span>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingCost(cost)}>
+                            <Pencil className="h-4 w-4" />
+                            Edytuj
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeleteId(cost.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Usuń
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    {/* Amount */}
-                    <p
-                      className="text-sm font-semibold shrink-0 tabular-nums"
-                      style={{ color: 'var(--color-amount)' }}
-                    >
-                      {formatCurrency(Number(cost.amount))}
-                    </p>
-                    {/* Actions */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors focus:outline-none -mr-2.5">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Akcje</span>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingCost(cost)}>
-                          <Pencil className="h-4 w-4" />
-                          Edytuj
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteId(cost.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Usuń
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {ci < monthCosts.length - 1 && (
+                      <div style={{ height: '0.5px', background: 'var(--color-border)', marginLeft: 64 }} />
+                    )}
                   </div>
                 )
               })}

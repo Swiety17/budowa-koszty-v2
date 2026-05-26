@@ -48,11 +48,22 @@ export default function LoginPage() {
       {/* Mobile: no card, just padded form */}
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary mb-3">
-            <span className="text-primary-foreground text-xl font-bold">B</span>
+          <div
+            className="inline-flex items-center justify-center rounded-2xl mb-3"
+            style={{ width: 56, height: 56, background: 'linear-gradient(145deg, var(--color-accent) 0%, var(--color-accent-dark) 100%)', boxShadow: '0 4px 16px rgba(44,165,147,0.32)' }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Budowa Koszty</h1>
-          <p className="text-muted-foreground text-sm mt-1">Zaloguj się do swojego konta</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-foreground)', letterSpacing: '-0.02em' }}>Budowa Koszty</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>Zaloguj się do swojego konta</p>
+          <div className="flex justify-center gap-4 mt-3">
+            {['Budżet na żywo', 'Skan OCR', 'Współpraca'].map(f => (
+              <span key={f} className="text-[11px] font-medium" style={{ color: 'var(--color-accent)' }}>{f}</span>
+            ))}
+          </div>
         </div>
 
         {/* Card on md+, bare on mobile */}

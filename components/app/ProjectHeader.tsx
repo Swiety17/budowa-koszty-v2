@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, MapPin, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Settings, Pencil, Users, Download, Trash2 } from 'lucide-react'
 import type { Project } from '@/types'
 import { formatCurrency } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -23,21 +23,49 @@ function parseBudget(raw: string): number | null {
   return isNaN(n) || n < 0 ? null : n
 }
 
+function BudgetBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div className="rounded-full overflow-hidden" style={{ height: 8, background: 'var(--color-surface3)' }}>
+      <div
+        className="h-full rounded-full motion-safe:transition-all motion-safe:duration-700"
+        style={{ width: `${pct}%`, background: color }}
+      />
+    </div>
+  )
+}
+
 export default function ProjectHeader({
   project: initial,
   total,
   isOwner,
+  costCount,
+  stageCount,
 }: {
   project: Project
   total: number
   isOwner: boolean
+  costCount?: number
+  stageCount?: number
 }) {
   const router = useRouter()
   const [project, setProject] = useState(initial)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
 
   const [form, setForm] = useState({
     name: initial.name,
@@ -88,82 +116,168 @@ export default function ProjectHeader({
 
   const pct = project.budget ? Math.min((total / project.budget) * 100, 100) : null
   const barColor =
-    pct === null       ? null
-    : pct < 75         ? 'var(--color-success)'
-    : pct < 95         ? 'var(--color-warning)'
-    :                    'var(--color-danger)'
+    pct === null ? null
+    : pct < 75   ? 'var(--color-success)'
+    : pct < 95   ? 'var(--color-warning)'
+    :               'var(--color-danger)'
 
   return (
     <>
+      {/* Back link */}
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground -ml-1 transition-colors"
+        className="inline-flex items-center gap-1 text-sm font-medium"
+        style={{ color: 'var(--color-accent)' }}
       >
-        <ArrowLeft className="h-4 w-4" />
-        Moje budowy
+        <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
+        Budowy
       </Link>
 
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        {/* Name + actions */}
+      {/* Project card */}
+      <div
+        className="rounded-2xl p-4 space-y-3"
+        style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
+      >
+        {/* Name row */}
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
+          <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold leading-snug">{project.name}</h1>
-              {!isOwner && <Badge variant="secondary">Udostępniona</Badge>}
+              <h1
+                className="text-xl font-bold leading-snug"
+                style={{ color: 'var(--color-foreground)', letterSpacing: '-0.02em' }}
+              >
+                {project.name}
+              </h1>
+              {!isOwner && (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 text-[11px] px-2 py-0 rounded-full"
+                  style={{ color: 'var(--color-accent)', background: 'var(--color-accent-light)', border: 'none' }}
+                >
+                  Wspólny
+                </Badge>
+              )}
             </div>
             {project.address && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <div className="flex items-center gap-1" style={{ color: 'var(--color-muted)' }}>
                 <MapPin className="h-3 w-3 shrink-0" />
-                <span className="truncate">{project.address}</span>
-              </p>
-            )}
-            {project.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{project.description}</p>
+                <span className="text-xs truncate">{project.address}</span>
+              </div>
             )}
           </div>
 
+          {/* Gear menu */}
           {isOwner && (
-            <div className="flex gap-1 shrink-0">
-              <Button variant="ghost" size="icon-sm" onClick={() => setEditOpen(true)}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edytuj</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setDeleteOpen(true)}
+            <div className="relative shrink-0" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(o => !o)}
+                className="flex items-center justify-center rounded-full"
+                style={{ width: 32, height: 32, color: 'var(--color-muted)', background: 'var(--color-surface2)' }}
+                aria-label="Opcje projektu"
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Usuń</span>
-              </Button>
+                <Settings className="h-4 w-4" />
+              </button>
+
+              {menuOpen && (
+                <div
+                  className="absolute right-0 top-10 z-30 rounded-2xl overflow-hidden animate-sheet-up"
+                  style={{
+                    minWidth: 210,
+                    background: 'var(--color-surface)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
+                    border: '0.5px solid var(--color-border)',
+                  }}
+                >
+                  {[
+                    { icon: Pencil,   label: 'Edytuj projekt',     color: '#3b82f6', action: () => { setMenuOpen(false); setEditOpen(true) } },
+                    { icon: Users,    label: 'Zarządzaj dostępem', color: '#8b5cf6', action: () => { setMenuOpen(false) } },
+                    { icon: Download, label: 'Eksport CSV',         color: '#14b8a6', action: () => { setMenuOpen(false) } },
+                  ].map(({ icon: Icon, label, color, action }, i) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={action}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-left"
+                      style={{
+                        borderBottom: i < 2 ? '0.5px solid var(--color-border)' : undefined,
+                        color: 'var(--color-foreground)',
+                      }}
+                    >
+                      <div className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, background: color }}>
+                        <Icon className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium">{label}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setDeleteOpen(true) }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-left"
+                    style={{ color: 'var(--color-danger)' }}
+                  >
+                    <div className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, background: 'var(--color-danger)' }}>
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium">Usuń projekt</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Total */}
-        <p className="text-3xl font-bold" style={{ color: 'var(--color-amount)' }}>
+        {/* Amount */}
+        <p
+          className="text-[26px] font-extrabold"
+          style={{ color: 'var(--color-foreground)', letterSpacing: '-0.03em', lineHeight: 1.1 }}
+        >
           {formatCurrency(total)}
         </p>
 
         {/* Budget bar */}
-        {project.budget && pct !== null ? (
-          <div className="space-y-1">
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full motion-safe:transition-all motion-safe:duration-500"
-                style={{ width: `${pct}%`, backgroundColor: barColor ?? undefined }}
-              />
+        {project.budget && pct !== null && (
+          <div className="space-y-1.5">
+            <BudgetBar pct={pct} color={barColor!} />
+            <div className="flex justify-between items-baseline">
+              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                z {formatCurrency(project.budget)}
+                {total > project.budget && (
+                  <span className="ml-2 font-medium" style={{ color: 'var(--color-danger)' }}>Przekroczony!</span>
+                )}
+              </p>
+              <span className="text-sm font-bold" style={{ color: barColor ?? undefined }}>
+                {Math.round(pct)}%
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round(pct)}% z {formatCurrency(project.budget)}
-              {total > project.budget && (
-                <span className="text-destructive ml-2 font-medium">Przekroczony!</span>
-              )}
-            </p>
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Brak budżetu</p>
+        )}
+        {!project.budget && (
+          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Brak budżetu</p>
+        )}
+
+        {/* Stats strip */}
+        {(costCount !== undefined || stageCount !== undefined) && (
+          <div
+            className="flex items-center gap-0 pt-2.5"
+            style={{ borderTop: '0.5px solid var(--color-border)' }}
+          >
+            {costCount !== undefined && (
+              <div className="flex-1 text-center">
+                <div className="text-base font-bold" style={{ color: 'var(--color-foreground)' }}>{costCount}</div>
+                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>kosztów</div>
+              </div>
+            )}
+            {costCount !== undefined && stageCount !== undefined && (
+              <div style={{ width: '0.5px', height: 32, background: 'var(--color-border)' }} />
+            )}
+            {stageCount !== undefined && (
+              <div className="flex-1 text-center">
+                <div className="text-base font-bold" style={{ color: 'var(--color-foreground)' }}>{stageCount}</div>
+                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>etapów</div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -223,10 +337,10 @@ export default function ProjectHeader({
                 maxLength={1000}
               />
             </div>
-          <Button className="w-full" size="lg" onClick={saveEdit} disabled={saving}>
-            {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
-          </Button>
-        </div>
+            <Button className="w-full" size="lg" onClick={saveEdit} disabled={saving}>
+              {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
 
